@@ -8,10 +8,6 @@ import pickle
 """
 
 subject_ids = [3095,3096,3097,4013,4014,4015,4016]
-rawColumns = ['PrL (E)', 'PrL (I)', 'vLS (E)', 'vLS (I)', 'POA (E)', 'POA (I)',
-       'BNST (E)', 'BNST (I)', 'AH (E)', 'AH (I)', 'MeA (E)', 'MeA (I)',
-       'VMH (E)', 'VMH (I)', 'NAc (DA)', 'unsupervised labels',
-       'supervised labels']
 
 # will require Path object
 def check_exist(mouseId, path=None):
@@ -97,6 +93,9 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
         #df.dropna(inplace = True)
         
         # filtering to add if necessary
+
+        # resetting index or not??
+        df = df.reset_index()
         
         # save out
         df.to_csv(full_path, index = False)
