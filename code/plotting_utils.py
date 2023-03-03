@@ -23,6 +23,9 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
     -------
     
     """
+    # loading path on my laptop as default
+    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
     # checking that particular mouse_id is a valid option
     if (int(mouseId) not in subject_ids and mouseId!='all'):
         raise Exception('Mouse id can only be "all" or in ', subject_ids)
@@ -32,7 +35,7 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
         raise Exception('Type can only be in', ['raw','supervised','unsupervised'])
 
     # loading data
-    df = load_and_wrangle(mouseId=mouseId, path=None, overwrite=False)
+    df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
 
     # info about which class is aggressive behavior
     if(type == 'unsupervised'):
