@@ -1,14 +1,97 @@
 # importing modules and packages
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
 import pandas as pd
 from io_utils import *
 from pathlib import Path
 import matplotlib as mpl
+from pathlib import Path
 
 cmapB = mpl.cm.Blues(np.linspace(0,1,20))
 cmapR = mpl.cm.Reds(np.linspace(0,1,20))
+
+def singleFrameBehavioralDistribution(mouseId, path=None, daysType='all',labeltype='unsupervised'):
+    """
+    plotting single frame distribution of behavioral classes
+
+    params:
+    -------
+    mouse_id: int or str
+        load id of subject mouse or 'all' for all mice together
+    type: str
+        'supervised' or 'unsupervised' or 'raw' - related to class labels to look at
+    
+    returns
+    -------
+    
+    """
+    # loading path on my laptop as default
+    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
+    # checking that particular mouse_id is a valid option
+    if(mouseId!='all'):
+        if(int(mouseId) not in subject_ids):
+            raise Exception('Mouse id can only be "all" or in ', subject_ids)
+
+    # checking that type of labels is a valid option
+    if (labeltype not in ['raw','supervised','unsupervised']):
+        raise Exception('Label type can only be in', ['raw','supervised','unsupervised'])
+
+    # checking that type of day arranging is a valid option
+    if (daysType not in ['all days','per day']):
+        raise Exception('Dyas type can only be in', ['all days','per day'])
+
+    # info about which class is aggressive behavior
+    if(labeltype == 'unsupervised'):
+        aggClass = 2
+        index_aggClass = 1 # because unsupervised start from 1
+    elif(labeltype == 'supervised'):
+        aggClass = 3 
+        index_aggClass = 3 # because unsupervised start from 0
+
+    # loading data
+    df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
+
+    # getting possible classes list
+    classes = df[f'{labeltype} labels'].unique()
+    classes.sort()
+
+    if (daysType == 'all days'):
+        # plotting distribution of classes across all days 
+
+        # scaling for total number of frames
+        totalFrames = len(df.index.tolist())
+
+        plt.title("Mouse " + str(mouseId))
+        plt.bar(classes,df[f'{labeltype} labels'].value_counts()[classes]/totalFrames,color='gray')
+        plt.bar(aggClass,df[f'{labeltype} labels'].value_counts()[aggClass]/totalFrames,color='darkred',label='agg') # coloring aggression red
+        plt.ylabel('single frame count')
+        plt.xlabel(f'{labeltype} classes')
+        plt.xticks(classes)
+        plt.legend()
+        plt.show()
+
+    elif (daysType == 'per day'):
+        # plotting distribution of classes for each day
+        days = df['day'].unique()
+        N = 3
+        ind = np.arange(0,len(classes)) 
+        width = 0.1
+        for day in days:
+            temp = df[df['day']==day]
+
+            # scaling for number of frames per day
+            totalFrames = len(temp.index.tolist())
+
+            plt.bar(ind + width*(day-1), temp[f'{labeltype} labels'].value_counts()[classes]/totalFrames, width, color=cmapB[day*2],label='day '+str(day))
+            plt.bar(ind[index_aggClass] + width*(day-1), temp[f'{labeltype} labels'].value_counts()[aggClass]/totalFrames, width, color=cmapR[day*2])
+        plt.xlabel(f'{labeltype} classes')
+        plt.xticks(ticks = ind + width*4,labels = classes)
+        plt.ylabel('single frame count')
+        plt.legend()
+        plt.title(f'Mouse {mouseId}')
+        plt.show()
+
 def behaviorDistributions(mouseId,path=None,type='unsupervised'):
     """
     plotting different behavioral distributions 
@@ -27,8 +110,9 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
     path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
     # checking that particular mouse_id is a valid option
-    if (int(mouseId) not in subject_ids and mouseId!='all'):
-        raise Exception('Mouse id can only be "all" or in ', subject_ids)
+    if(mouseId!='all'):
+        if(int(mouseId) not in subject_ids):
+            raise Exception('Mouse id can only be "all" or in ', subject_ids)
 
     # checking that type of labels is a valid option
     if (type not in ['raw','supervised','unsupervised']):

@@ -13,10 +13,11 @@ subject_ids = [3095,3096,3097,4013,4014,4015,4016]
 def check_exist(mouseId, path=None):
     """
     constructing function that creates path name based on inputs while also checking if the file already exists
+    
     params:
     -------
     mouse_id: int or str
-        load id of subject mouse 
+        load id of subject mouse or 'all' for all mice together
     
     returns
     -------
@@ -26,16 +27,17 @@ def check_exist(mouseId, path=None):
     path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
 
     # checking that particular mouse_id is a valid option
-    if (int(mouseId) not in subject_ids):
-        raise Exception('Mouse id can only be in ', subject_ids)
-    else:
-        # create a string of the file name to look for
-        fname = f"{mouseId}.csv"
-        # determine what directory to look for the file in 
-        full_path = path / fname
+    if(mouseId!='all'):
+        if(int(mouseId) not in subject_ids):
+            raise Exception('Mouse id can only be "all" or in ', subject_ids)
+        
+    # create a string of the file name to look for
+    fname = f"{mouseId}.csv"
+    # determine what directory to look for the file in 
+    full_path = path / fname
 
-        # return if it exists or not
-        return full_path.exists(), full_path
+    # return if it exists or not
+    return full_path.exists(), full_path
 
 #import Jorge's dataset or wrangle data
 def load_and_wrangle(mouseId, path=None, overwrite=False):
@@ -74,27 +76,40 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
 
         # create dataframe
         dfCol = ['subject','other','day','trial']
-        rawColumns = dict[f'{mouseId}_d1_balbc_t1'].columns.tolist()
+        if (mouseId == 'all'):
+            rawColumns = dict['4015_d1_balbc_t1'].columns.tolist() # mouse 4015 has max number of columns
+        else:
+            rawColumns = dict[f'{mouseId}_d1_balbc_t1'].columns.tolist()
         dfCol = dfCol + rawColumns
         df = pd.DataFrame(columns = dfCol)
         
-        # load data for mouse
-        for key in dict.keys():
-            if(int(key[0:4])==int(mouseId)):
+        # load data for mouse or all
+        if (mouseId=='all'):
+            for key in dict.keys():
                 dfTemp = dict[key]
-                dfTemp["subject"] = int(mouseId)
+                dfTemp["subject"] = key[0:4]
                 dfTemp["other"] = key[8:12]
                 dfTemp["day"] = int(key[6])
                 dfTemp["trial"] = int(key[-1])
-                dfTemp = dfTemp[dfCol] # reordering columns
                 df = pd.concat([df,dfTemp])
+            df = df[dfCol] # reordering columns
+        else:
+            for key in dict.keys():
+                if(int(key[0:4])==int(mouseId)):
+                    dfTemp = dict[key]
+                    dfTemp["subject"] = int(mouseId)
+                    dfTemp["other"] = key[8:12]
+                    dfTemp["day"] = int(key[6])
+                    dfTemp["trial"] = int(key[-1])
+                    dfTemp = dfTemp[dfCol] # reordering columns
+                    df = pd.concat([df,dfTemp])
         
         # dropping any row with a missing value within the dataframe
         #df.dropna(inplace = True)
         
         # filtering to add if necessary
 
-        # resetting index or not??
+        # resetting index 
         df = df.reset_index()
         
         # save out
