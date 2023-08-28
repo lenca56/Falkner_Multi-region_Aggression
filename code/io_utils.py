@@ -7,7 +7,7 @@ import pickle
    utils to be used for importing and wrangling data
 """
 
-subject_ids = [3095,3096,3097,4013,4014,4015,4016]
+animalIDs = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2']
 
 # will require Path object
 def check_exist(mouseId, path=None):
@@ -27,12 +27,12 @@ def check_exist(mouseId, path=None):
     path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
 
     # checking that particular mouse_id is a valid option
-    if(mouseId!='all'):
-        if(int(mouseId) not in subject_ids):
-            raise Exception('Mouse id can only be "all" or in ', subject_ids)
+    if(mouseId  != 'all'):
+        if(mouseId not in animalIDs):
+            raise Exception('Mouse id can only be "all" or a string in ', animalIDs)
         
     # create a string of the file name to look for
-    fname = f"{mouseId}.csv"
+    fname = f"{mouseId}_neural_data.csv"
     # determine what directory to look for the file in 
     full_path = path / fname
 
@@ -71,7 +71,7 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
     
     else:
         # Load data into dictionary
-        with open('../data/full_traces.pickle', 'rb') as handle:
+        with open('../data/fully_labeled_traces_smoothedLabels_071223_nonznorm.pickle', 'rb') as handle:
             dict = pickle.load(handle)
 
         # create dataframe
@@ -87,20 +87,22 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
         if (mouseId=='all'):
             for key in dict.keys():
                 dfTemp = dict[key]
-                dfTemp["subject"] = key[0:4]
-                dfTemp["other"] = key[8:12]
-                dfTemp["day"] = int(key[6])
-                dfTemp["trial"] = int(key[-1])
+                s = key.split('_')
+                dfTemp["subject"] = s[0]
+                dfTemp["other"] = s[2]
+                dfTemp["day"] = s[1]
+                dfTemp["trial"] = s[3]
                 df = pd.concat([df,dfTemp])
             df = df[dfCol] # reordering columns
         else:
             for key in dict.keys():
-                if(int(key[0:4])==int(mouseId)):
+                s = key.split('_')
+                if (s[0] == mouseId):
                     dfTemp = dict[key]
-                    dfTemp["subject"] = int(mouseId)
-                    dfTemp["other"] = key[8:12]
-                    dfTemp["day"] = int(key[6])
-                    dfTemp["trial"] = int(key[-1])
+                    dfTemp["subject"] = s[0]
+                    dfTemp["other"] = s[2]
+                    dfTemp["day"] = s[1]
+                    dfTemp["trial"] = s[3]
                     dfTemp = dfTemp[dfCol] # reordering columns
                     df = pd.concat([df,dfTemp])
         
