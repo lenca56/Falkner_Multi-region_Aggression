@@ -109,14 +109,30 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
         # dropping any row with a missing value within the dataframe
         #df.dropna(inplace = True)
         
-        # filtering to add if necessary
+        # filtering to add if necessary 
 
         # resetting index 
-        df = df.reset_index()
+        df = df.reset_index(drop=True)
         
         # save out
         df.to_csv(full_path, index = False)
-        
+
         return df
+
+def get_regions_dataframe(df):
+    regions = list(df.columns)
+    # drop columns that only have missing values
+    for col in df.columns:
+        if df[col].isna().sum() == len(df.index.tolist()): # dropping columns with only missing values
+            regions.remove(col)
+    regions.remove('day')
+    regions.remove('subject')
+    regions.remove('other')
+    regions.remove('trial')
+    regions.remove('supervised labels')
+    regions.remove('unsupervised labels')
+        
+    return regions
+
 
     
