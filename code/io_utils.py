@@ -71,7 +71,7 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
     
     else:
         # Load data into dictionary
-        with open('../data/fully_labeled_traces_smoothedLabels_071223_nonznorm.pickle', 'rb') as handle:
+        with open('../data/fully_labeled_traces_smoothedLabels_031024.pickle', 'rb') as handle:
             dict = pickle.load(handle)
 
         # create dataframe
