@@ -214,3 +214,35 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
     plt.xlabel(f'{type} classes')
     plt.xticks(classes)
     plt.show()
+
+# function to plot histograms of features values for an animal
+def histogram_feature(animal, features, path=None):
+    
+    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
+    df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
+    days = np.unique(df['day'])
+    trials = np.unique(df['trial'])
+
+    X = np.empty((len(days)), dtype=object)
+    for ind_feature in range(len(features)):
+        a = np.empty((len(days)*len(trials)), dtype=object) # all features across sessions to get optimal bin partition
+        c = 0 # counting index
+        for ind_day in range(0, len(days)): # day index
+            for ind_trial in range(0,len(trials)): # trial index
+                if (ind_day == 8):
+                    other = 'mCD1'
+                else:
+                    other = 'balbc'
+                df = pd.read_parquet(f'../data/29L_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
+                a[c] = np.array(df[features[ind_feature]])
+                c = c + 1
+
+        all = np.concatenate(a)
+
+        bin_edges = np.histogram_bin_edges(all, bins='fd') # optimal number of bins with fd method
+        # _, bin_edges = np.histogram(all, bins=Nbins)
+        plt.figure()
+        plt.title(features[ind_feature])
+        plt.hist(all, bins=bin_edges)
+        plt.show()

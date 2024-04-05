@@ -120,7 +120,7 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
         return df
 
 def get_regions_dataframe(df):
-    regions = list(df.columns)
+    regions = df.columns.tolist()
     # drop columns that only have missing values
     for col in df.columns:
         if df[col].isna().sum() == len(df.index.tolist()): # dropping columns with only missing values
@@ -129,10 +129,128 @@ def get_regions_dataframe(df):
     regions.remove('subject')
     regions.remove('other')
     regions.remove('trial')
-    regions.remove('supervised labels')
     regions.remove('unsupervised labels')
         
     return regions
+
+def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
+
+    ''' 
+    ONLY WORKING FOR SINGLE FEATURE NOW
+
+    Parameters:
+    ----------
+    animal: str
+        animal ID
+    variables: list of str
+        behavioral variables to be include in the design matrix
+    timelags: list of [int,int]
+        both positive
+
+
+    Returns:
+    --------
+    X_all: numpy array
+        array of behavioral features in time for all days together
+    X: array of vectors
+        X[day] is an array of behavioral features in time given for a particular day
+    '''
+
+    # loading path on my laptop as default
+    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
+    df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
+    days = np.unique(df['day'])
+    trials = np.unique(df['trial'])
+
+    X = np.empty((len(days)), dtype=object)
+    for ind_feature in range(len(features)):
+        a = np.empty((len(days)*len(trials)), dtype=object) # all features across sessions to get optimal bin partition
+        c = 0 # counting index
+        for ind_day in range(0, len(days)): # day index
+            for ind_trial in range(0,len(trials)): # trial index
+                if (ind_day == 8):
+                    other = 'mCD1'
+                else:
+                    other = 'balbc'
+                df = pd.read_parquet(f'../data/29L_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
+                a[c] = np.array(df[features[ind_feature]])
+                c = c + 1
+
+        all = np.concatenate(a)
+        # bin_edges = np.histogram_bin_edges(all, bins='fd') # optimal number of bins with fd method
+        _, bin_edges = np.histogram(all, bins=Nbins)
+        # print(bin_edges.shape)
+        # plt.figure()
+        # plt.title(features[ind_feature])
+        # plt.hist(all, bins=bin_edges)
+        # plt.show()
+        
+        c = 0
+        for ind_day in range(0, len(days)): # day index
+            X_temp = np.empty((len(trials)), dtype=object)
+            for ind_trial in range(0,len(trials)): # trial index
+                X_temp[ind_trial] = np.zeros((a[c].shape[0], Nbins))
+                for ind_bin in range(Nbins):
+                    ind_lower = np.argwhere(a[c] >=  bin_edges[ind_bin]).flatten()
+                    ind_upper = np.argwhere(a[c] <  bin_edges[ind_bin+1]).flatten()
+                    ind_binned = list(set(ind_lower).intersection(set(ind_upper)))
+                    X_temp[ind_trial][ind_binned, ind_bin] = 1
+                c = c + 1    
+            X[ind_day] = np.concatenate((X_temp), axis=0) # concatenate across trials within a day
+            X[ind_day] = np.concatenate([np.ones((X[ind_day].shape[0], 1)), X[ind_day]], axis=1) # add bias term
+    X_all = np.concatenate(X, axis=0) # concatenate all days together
+    bin_centers = (bin_edges[0:-1] + bin_edges[1:])/2
+    return X_all, X, bin_centers
+
+def get_output_Y_GLM(animal, region, path=None):
+    ''' 
+    function to prepare vector output Y (calcium populationa activity for one specific region) for GLM
+
+    Parameters:
+    ----------
+    animal: str
+        animal ID
+    region: str
+        region name
+
+    Returns:
+    --------
+    Y_all: numpy array
+        vector of calcium activity of the given region for all sessions together
+    Y: array of vectors
+        Y[day] is a vector of calcium activity in the region given for a particular session
+    '''
+    # loading path on my laptop as default
+    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
+    df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
+    regions = get_regions_dataframe(df)
+    days = np.unique(df['day'])
+    trials = np.unique(df['trial'])
+
+    if region not in regions:
+        return np.nan, np.nan
+    else:
+        Y = np.empty((len(days)), dtype=object)
+
+        for ind_day in range(0, len(days)): # day index
+            if (ind_day == 8):
+                other = 'mCD1'
+            else:
+                other = 'balbc'
+            Y_temp = np.empty((len(trials)), dtype=object)
+            for ind_trial in range(0,len(trials)): # trial index
+                dftemp = df[df['day'] == days[ind_day]]
+                dftemp = dftemp[dftemp['trial'] == trials[ind_trial]]
+                dftemp = dftemp[dftemp['other'] == other].reset_index()
+                Y_temp[ind_trial] = np.array(dftemp[region])
+            Y[ind_day] = np.concatenate((Y_temp), axis=0)
+        Y_all = np.concatenate(Y, axis=0) 
+        return Y_all, Y
+
+
+
 
 
     
