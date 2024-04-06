@@ -35,7 +35,7 @@ def PCAfunction(mouseId, path=None, type=None):
 # Linear Gaussian GLM model 
 def solution_linear_Gaussian_smoothing(X, Y, feature_start, alpha):
     ''' 
-    first feature index is bias term, which is not regularized
+    single features are also regularized (like with ridge)
 
     Parameters:
     featureIndex: list of int
@@ -48,11 +48,8 @@ def solution_linear_Gaussian_smoothing(X, Y, feature_start, alpha):
             L[t,t] = 2
             L[t,t-1] = -1
             L[t-1,t] = -1
-        if feature_start[ind+1]-1 == feature_start[ind]: # tuning curve has length 1
-            L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 0 # last coeff in tuning curve
-        else:
-            L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 1
- 
+        L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 1
+   
     return np.linalg.solve(X.T @ X + alpha * L, X.T @ Y) 
 
 def mse(X_true, Y_true, W_map):

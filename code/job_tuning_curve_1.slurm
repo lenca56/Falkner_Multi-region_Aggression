@@ -15,6 +15,5 @@ echo "Executing on the machine:" $(hostname)
 
 module purge
 module load anaconda3/2023.3
-conda activate dglmhmm
 
-python ClusterScriptAlpha=0.py
+python Cluster_Script_Tuning_Curve_1.py
