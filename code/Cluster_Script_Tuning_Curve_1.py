@@ -31,8 +31,8 @@ animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 
 # setting hyperparameters
-alpha_values = [1]#[10**x for x in range(-4,5)] 
-Nbin_values = [10] #[2**x for x in range(3,9)]
+alpha_values = [10**x for x in range(-4,5)] 
+Nbin_values = [2**x for x in range(3,9)]
 
 W_map = np.empty((len(featuresShortlist), len(Nbin_values), len(alpha_values)), dtype=object)
 train_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)))
