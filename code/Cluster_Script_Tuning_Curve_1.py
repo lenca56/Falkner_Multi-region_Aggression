@@ -26,7 +26,8 @@ for animal in animals:
         z += 1
 
 # read from cluster array in order to get parallelizations
-idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
+# idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
+idx = 0
 animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 
