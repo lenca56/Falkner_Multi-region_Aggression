@@ -9,7 +9,7 @@ from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 
-def PCAfunction(mouseId, path=None, type=None):
+def PCAfunction(mouseId, path=None):
     df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
     temp = df.drop(columns=['subject','other','day','trial','unsupervised labels','supervised labels'])
     
@@ -56,13 +56,15 @@ def mse(X_true, Y_true, W_map):
 
     return np.linalg.norm(X_true @ W_map - Y_true) ** 2 / Y_true.shape[0]
 
-def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alpha_values):
+def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alpha_values, path=None):
     ''' 
     fitting all days together
 
     for only one feature for now
 
     '''
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
 
     W_map = np.empty((len(Nbin_values), len(alpha_values)), dtype=object)
     train_mse = np.zeros((len(Nbin_values), len(alpha_values)))
@@ -71,8 +73,8 @@ def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alph
     for Nbin_ind in range(len(Nbin_values)):
         Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curve
 
-        X_all, _, _ = get_design_X_GLM_features(animal, features=features, Nbins=Nbin, path=None)
-        Y_all, _ = get_output_Y_GLM(animal, region, path=None)
+        X_all, _, _ = get_design_X_GLM_features(animal, features=features, Nbins=Nbin, path=path)
+        Y_all, _ = get_output_Y_GLM(animal, region, path=path)
 
         # Split data
         X_train, X_test, Y_train, Y_test = train_test_split(X_all, Y_all, test_size=0.2, random_state=42)

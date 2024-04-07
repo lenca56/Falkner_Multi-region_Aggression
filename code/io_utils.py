@@ -23,9 +23,9 @@ def check_exist(mouseId, path=None):
     -------
     
     """
-    # loading path on my laptop as default
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
     # checking that particular mouse_id is a valid option
     if(mouseId  != 'all'):
         if(mouseId not in animalIDs):
@@ -164,9 +164,9 @@ def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
         X[day] is an array of behavioral features in time given for a particular day
     '''
 
-    # loading path on my laptop as default
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
     df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
     days = np.unique(df['day'])
     trials = np.unique(df['trial'])
@@ -230,9 +230,9 @@ def get_output_Y_GLM(animal, region, path=None):
     Y: array of vectors
         Y[day] is a vector of calcium activity in the region given for a particular session
     '''
-    # loading path on my laptop as default
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
     df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
     regions = get_regions_dataframe(df)
     days = np.unique(df['day'])
