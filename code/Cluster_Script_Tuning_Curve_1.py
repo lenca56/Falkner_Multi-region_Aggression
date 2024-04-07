@@ -38,7 +38,7 @@ W_map = np.empty((len(featuresShortlist), len(Nbin_values), len(alpha_values)), 
 train_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)))
 test_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)))
 
-for ind in [0]:#range(len(featuresShortlist)):
+for ind in range(len(featuresShortlist)):
     # fitting
     W_map[ind, :, :], train_mse[ind,:,:], test_mse[ind,:,:] = fit_CV_linear_Gaussian_smoothing(animal=animal, features=[featuresShortlist[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values)          
                                                                 
