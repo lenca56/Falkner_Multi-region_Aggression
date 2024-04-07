@@ -60,8 +60,8 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
     df : pandas dataframe
         filtered to specs provided as inputs above
     """
-    # loading path on my laptop as default
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
     exists, full_path = check_exist(mouseId=mouseId, path=path)
     
@@ -125,12 +125,20 @@ def get_regions_dataframe(df):
     for col in df.columns:
         if df[col].isna().sum() == len(df.index.tolist()): # dropping columns with only missing values
             regions.remove(col)
+            
     regions.remove('day')
     regions.remove('subject')
     regions.remove('other')
     regions.remove('trial')
     regions.remove('unsupervised labels')
-        
+
+    if 'supervised labels' in regions:
+        regions.remove('supervised labels')
+    if 'attack labels' in regions:
+        regions.remove('attack labels')
+    if 'investigation labels' in regions:
+        regions.remove('investigation labels')
+    
     return regions
 
 def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
@@ -173,7 +181,7 @@ def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
                     other = 'mCD1'
                 else:
                     other = 'balbc'
-                df = pd.read_parquet(f'../data/29L_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
+                df = pd.read_parquet(f'../data/{animal}/{animal}_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
                 a[c] = np.array(df[features[ind_feature]])
                 c = c + 1
 
@@ -201,6 +209,7 @@ def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
             X[ind_day] = np.concatenate([np.ones((X[ind_day].shape[0], 1)), X[ind_day]], axis=1) # add bias term
     X_all = np.concatenate(X, axis=0) # concatenate all days together
     bin_centers = (bin_edges[0:-1] + bin_edges[1:])/2
+
     return X_all, X, bin_centers
 
 def get_output_Y_GLM(animal, region, path=None):
@@ -230,6 +239,7 @@ def get_output_Y_GLM(animal, region, path=None):
     trials = np.unique(df['trial'])
 
     if region not in regions:
+
         return np.nan, np.nan
     else:
         Y = np.empty((len(days)), dtype=object)
@@ -247,6 +257,7 @@ def get_output_Y_GLM(animal, region, path=None):
                 Y_temp[ind_trial] = np.array(dftemp[region])
             Y[ind_day] = np.concatenate((Y_temp), axis=0)
         Y_all = np.concatenate(Y, axis=0) 
+
         return Y_all, Y
 
 
