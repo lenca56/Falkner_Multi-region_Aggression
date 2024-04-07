@@ -41,7 +41,7 @@ test_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)
 
 for ind in range(len(featuresShortlist)):
     # fitting
-    W_map[ind, :, :], train_mse[ind,:,:], test_mse[ind,:,:] = fit_CV_linear_Gaussian_smoothing(animal=animal, features=[featuresShortlist[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values)          
+    W_map[ind, :, :], train_mse[ind,:,:], test_mse[ind,:,:] = fit_CV_linear_Gaussian_smoothing(animal=animal, features=[featuresShortlist[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, path=data_path)          
                                                                 
 # saving
 np.savez(f'../data/{animal}/{animal}_MAP-estimation_region={region}', W_map=W_map, train_mse=train_mse, test_mse=test_mse)
