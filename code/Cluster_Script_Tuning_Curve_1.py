@@ -26,14 +26,13 @@ for animal in animals:
         z += 1
 
 # read from cluster array in order to get parallelizations
-# idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
-idx = 0
+idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
 animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 
 # setting hyperparameters
-alpha_values = [1] #[10**x for x in range(-4,5)] 
-Nbin_values = [2] #[2**x for x in range(3,9)]
+alpha_values = [10**x for x in range(-4,5)] 
+Nbin_values = [2**x for x in range(3,9)]
 
 W_map = np.empty((len(featuresShortlist), len(Nbin_values), len(alpha_values)), dtype=object)
 train_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)))
