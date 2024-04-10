@@ -26,8 +26,8 @@ def singleFrameBehavioralDistribution(mouseId, path=None, daysType='all',labelty
     
     """
     # loading path on my laptop as default
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-    
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
     # checking that particular mouse_id is a valid option
     if(mouseId!='all'):
         if(int(mouseId) not in subject_ids):
@@ -107,8 +107,8 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
     
     """
     # loading path on my laptop as default
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-    
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
     # checking that particular mouse_id is a valid option
     if(mouseId!='all'):
         if(int(mouseId) not in subject_ids):
@@ -218,8 +218,8 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
 # function to plot histograms of features values for an animal
 def histogram_feature(animal, features, path=None):
     
-    path = Path("/Users/lencacuturela/Desktop/Research/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
     df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
     days = np.unique(df['day'])
     trials = np.unique(df['trial'])
@@ -234,7 +234,7 @@ def histogram_feature(animal, features, path=None):
                     other = 'mCD1'
                 else:
                     other = 'balbc'
-                df = pd.read_parquet(f'../data/29L_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
+                df = pd.read_parquet(f'../data/{animal}/{animal}_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
                 a[c] = np.array(df[features[ind_feature]])
                 c = c + 1
 
