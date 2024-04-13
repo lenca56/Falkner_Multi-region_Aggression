@@ -181,6 +181,50 @@ def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alph
 
     return W_map, train_mse, test_mse
 
+def fit_KFold_linear_Gaussian_smoothing(animal, features, circular_features, region, Nbin_values, alpha_values, K=5, blocks=100, path=None):
+    ''' 
+    fitting all days together
+
+    for only one feature fits for now
+
+    '''
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
+    W_map = np.empty((K, len(Nbin_values), len(alpha_values)), dtype=object)
+    train_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
+    test_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
+
+    Y_all, _ = get_output_Y_GLM(animal, region, path=path)
+    presentTrain, presentTest = split_data(N=Y_all.shape[0], Kfolds=K, blocks=blocks, random_state=42)
+
+    for Nbin_ind in range(len(Nbin_values)):
+        Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curve
+
+        X_all, _, _ = get_design_X_GLM_features(animal, features=features, Nbins=Nbin, path=path)
+
+        # Split data
+        
+        for k in range(K):
+        
+            X_train, X_test, Y_train, Y_test = X_all[presentTrain[k]], X_all[presentTest[k]], Y_all[presentTrain[k]], Y_all[presentTest[k]]
+
+            for alpha_ind in range(len(alpha_values)):
+                # regularizer hyperparameter
+                alpha = alpha_values[alpha_ind] 
+    
+                # Fit to train data
+                W_map[k, Nbin_ind, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=[0, 1], circular=[0, circular_features[0]], alpha=alpha) # bias term and only one tuning curve
+
+                # MSE
+                train_mse[k, Nbin_ind, alpha_ind] = mse(X_train, Y_train, W_map[k, Nbin_ind, alpha_ind])
+                test_mse[k, Nbin_ind, alpha_ind] = mse(X_test, Y_test, W_map[k, Nbin_ind, alpha_ind])
+
+        # find best alpha for this number of bins
+        # best_alpha = np.argmin(test_mse[Nbin_ind, :])
+
+    return W_map, train_mse, test_mse
+
     
 
 
