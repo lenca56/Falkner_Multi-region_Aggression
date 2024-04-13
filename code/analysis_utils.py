@@ -7,7 +7,8 @@ from pathlib import Path
 import matplotlib as mpl
 from pathlib import Path
 from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
+
 
 def PCAfunction(mouseId, path=None):
     df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
@@ -82,6 +83,64 @@ def mse(X_true, Y_true, W_map):
 
     return np.linalg.norm(X_true @ W_map - Y_true) ** 2 / Y_true.shape[0]
 
+def split_data(N, Kfolds=5, blocks=100, random_state=42):
+    ''' 
+    splitting data function for cross-validation by giving out indices of test and train
+    splits each session into consecutive blocks that randomly go into train and test => each session appears in both train and test
+
+    !Warning: each session must have at least (folds-1) * blocks  trials
+
+    Parameters
+    ----------
+    x: n x d numpy array
+        full design matrix
+    y : n x 1 numpy vector 
+        full vector of observations with values 0,1,..,C-1
+    sessInd: list of int
+        indices of each session start, together with last session end + 1
+    folds: int
+        number of folds to split the data in (test has 1/folds points of whole dataset)
+    blocks: int (default = 10)
+        blocks of trials to keep together when splitting data (to keep some time dependencies)
+    random_state: int (default=1)
+        random seed to always get the same split if unchanged
+
+    Returns
+    -------
+    trainX: list of train_size[i] x d numpy arrays
+        trainX[i] has input train data of i-th fold
+    trainY: list of train_size[i] numpy arrays
+        trainY[i] has output train data of i-th fold
+    trainSessInd: list of lists
+        trainSessInd[i] have session start indices for the i-th fold of the train data
+    testX: // same for test
+    '''
+   
+    # initializing
+    presentTrain = np.empty((Kfolds), dtype=object)
+    presentTest = np.empty((Kfolds), dtype=object)
+
+
+    # split session indices into blocks and get session indices for train and test
+    yBlock = np.arange(0, N/blocks)
+    kf = KFold(n_splits=Kfolds, shuffle=True, random_state=random_state) # shuffle=True and random_state=int for random splitting, otherwise it's consecutive
+    for i, (train_blocks, test_blocks) in enumerate(kf.split(yBlock)):
+        train_indices = []
+        test_indices = []
+        for b in yBlock:
+            if (b in train_blocks):
+                train_indices = train_indices + list(np.arange(b*blocks, min((b+1) * blocks, N)).astype(int))
+            elif(b in test_blocks):
+                test_indices = test_indices + list(np.arange(b*blocks, min((b+1) * blocks, N)).astype(int))
+            else:
+                raise Exception("Something wrong with session block splitting")
+            
+        presentTrain[i] = train_indices # part of training set for fold i
+        presentTest[i] = test_indices # part of test set for fold i
+
+    return presentTrain, presentTest
+
+
 def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alpha_values, path=None):
     ''' 
     fitting all days together
@@ -109,7 +168,7 @@ def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alph
             alpha = alpha_values[alpha_ind] # regularizer hyperparameter
    
             # Fit to train data
-            W_map[Nbin_ind, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=[0, 1, X_all.shape[1]], alpha=alpha) # bias term and only one tuning curve
+            W_map[Nbin_ind, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=[0, 1], alpha=alpha) # bias term and only one tuning curve
 
             # MSE
             train_mse[Nbin_ind, alpha_ind] = mse(X_train, Y_train, W_map[Nbin_ind, alpha_ind])
