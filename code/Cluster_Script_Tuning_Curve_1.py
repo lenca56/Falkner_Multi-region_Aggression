@@ -36,9 +36,9 @@ alpha_values = [10**x for x in range(-3,7)]
 Nbin_values = [2**x for x in range(3,7)]
 K = 5
 
-W_map = np.empty((len(featuresShortlist), len(Nbin_values), len(alpha_values)), dtype=object)
-train_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)))
-test_mse = np.zeros((len(featuresShortlist), len(Nbin_values), len(alpha_values)))
+W_map = np.empty((len(featuresShortlist), K, len(Nbin_values), len(alpha_values)), dtype=object)
+train_mse = np.zeros((len(featuresShortlist), K, len(Nbin_values), len(alpha_values)))
+test_mse = np.zeros((len(featuresShortlist), K, len(Nbin_values), len(alpha_values)))
 
 for ind in range(len(featuresShortlist)):
     # fitting
