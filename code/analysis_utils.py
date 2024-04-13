@@ -33,14 +33,25 @@ def PCAfunction(mouseId, path=None):
     plt.show()
 
 # Linear Gaussian GLM model 
-def solution_linear_Gaussian_smoothing(X, Y, feature_start, alpha):
+def solution_linear_Gaussian_smoothing(X, Y, feature_start, circular, alpha):
     ''' 
     single features are also regularized (like with ridge)
 
     Parameters:
-    featureIndex: list of int
-        indices for first coeff of a feature-specific tuning curve (in ascending order), plus the X.shape[1] at the end
+    ___________
+    X: numpy matrix
+        regressors 
+    Y: numpy vector
+        target (calcium activity of a region)
+    feature_start: list of int 
+        indices for first coeff of a feature-specific tuning curve (in ascending order), including bias at 0
+    circular: list of 0s and 1s (same length as feature_start!)
+        1 if that tuning curve is circular and needs smoothing at the ends
+    alpha: float
+        strength of regularization hyperparameter
     '''
+    feature_start.append(X.shape[1]) # adding last possible index to signal end of for loop
+
     L = np.zeros((X.shape[1], X.shape[1]))
     for ind in range(len(feature_start)-1):
         L[feature_start[ind], feature_start[ind]] = 1 # first coeff in tuning curve
@@ -48,8 +59,23 @@ def solution_linear_Gaussian_smoothing(X, Y, feature_start, alpha):
             L[t,t] = 2
             L[t,t-1] = -1
             L[t-1,t] = -1
-        L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 1
-   
+
+        # check if feature is circular and needs smoothing at its ends
+        if circular[ind] == 1: # connecting first and last point of tuning curve
+            L[feature_start[ind], feature_start[ind]] = 2
+            L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 2
+            L[feature_start[ind], feature_start[ind+1]-1] = -1
+            L[feature_start[ind+1]-1, feature_start[ind]] = -1
+        else: 
+            L[feature_start[ind], feature_start[ind]] = 1
+            L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 1
+
+        if feature_start[ind+1] - feature_start[ind] == 1: # only one point in tuning curve
+            L[feature_start[ind], feature_start[ind]] = 1
+        elif feature_start[ind+1] - feature_start[ind] == 2: # only two points in tuning curve
+            L[feature_start[ind], feature_start[ind]] = 1
+            L[feature_start[ind]+1, feature_start[ind]+1] = 1
+
     return np.linalg.solve(X.T @ X + alpha * L, X.T @ Y) 
 
 def mse(X_true, Y_true, W_map):
@@ -91,22 +117,8 @@ def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alph
 
         
         # find best alpha for this number of bins
-        best_alpha = np.argmin(test_mse[Nbin_ind, :])
+        # best_alpha = np.argmin(test_mse[Nbin_ind, :])
 
-        # fig, axes = plt.subplots()
-        # axes.plot(W_map[Nbin_ind, best_alpha][1:])
-        # axes.set_xlabel(features[0] + ' filter')
-        # axes.set_title(region + ' : alpha = ' + str(alpha_values[best_alpha]))
-        # plt.show()
-
-        # fig, axes = plt.subplots()
-        # axes.plot(np.log10(alpha_values), train_mse[Nbin_ind, :], color='blue', label='train')
-        # axes.plot(np.log10(alpha_values), test_mse[Nbin_ind, :], color='orange', label='test')
-        # axes.set_ylabel('MSE')
-        # axes.set_xlabel('alpha value')
-        # axes.set_title(region)
-        # axes.legend()
-        # plt.show()
 
     return W_map, train_mse, test_mse
 
