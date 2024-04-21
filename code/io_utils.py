@@ -7,10 +7,13 @@ import pickle
    utils to be used for importing and wrangling data
 """
 
-animalIDs = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2']
+animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
+animalsObs = ['29L','30R2','86L', '87L2'] # list of observer animals
+animalsToy = ['86L2', '87B', '87L','87R2']
+animalsAll = animalsAgg + animalsObs + animalsToy
 
 # will require Path object
-def check_exist(mouseId, path=None):
+def check_exist(mouseId, group='agg', path=None):
     """
     constructing function that creates path name based on inputs while also checking if the file already exists
     
@@ -25,14 +28,17 @@ def check_exist(mouseId, path=None):
     """
     # loading path on my hard disk as default
     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
+    if group not in ['agg','obs','toy']:
+        raise Exception('Group of animal can only be "agg","obs", or "toy"')
     
     # checking that particular mouse_id is a valid option
     if(mouseId  != 'all'):
-        if(mouseId not in animalIDs):
-            raise Exception('Mouse id can only be "all" or a string in ', animalIDs)
+        if(mouseId not in animalsAll):
+            raise Exception('Mouse id can only be "all" or a string in ', animalsAll)
         
     # create a string of the file name to look for
-    fname = f"{mouseId}_neural_data.csv"
+    fname = f"{mouseId}_{group}_neural_data.csv"
     # determine what directory to look for the file in 
     full_path = path / fname
 
@@ -40,7 +46,7 @@ def check_exist(mouseId, path=None):
     return full_path.exists(), full_path
 
 #import Jorge's dataset or wrangle data
-def load_and_wrangle(mouseId, path=None, overwrite=False):
+def load_and_wrangle(mouseId, group='agg', path=None, overwrite=False):
 
     """
     Updated function for loading & cleaning individual mouse .csv file
@@ -63,7 +69,7 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
     # loading path on my hard disk as default
     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
-    exists, full_path = check_exist(mouseId=mouseId, path=path)
+    exists, full_path = check_exist(mouseId=mouseId, group=group, path=path)
     
     if exists and overwrite==False:
         df = pd.read_csv(full_path)
@@ -71,40 +77,38 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
     
     else:
         # Load data into dictionary
-        with open('../data/fully_labeled_traces_smoothedLabels_031024.pickle', 'rb') as handle:
+        with open('../data/fully_labeled_traces_041824_nonznorm.pickle', 'rb') as handle:
             dict = pickle.load(handle)
 
         # create dataframe
-        dfCol = ['subject','other','day','trial']
-        if (mouseId == 'all'):
-            rawColumns = dict['4015_d1_balbc_t1'].columns.tolist() # mouse 4015 has max number of columns
-        else:
+        dfCol = ['subject','group','other','day','trial']
+
+        if (group == 'agg'):
             rawColumns = dict[f'{mouseId}_d1_balbc_t1'].columns.tolist()
+        else: 
+            rawColumns = dict[f'{mouseId}_d1_{group}_t1'].columns.tolist()
         dfCol = dfCol + rawColumns
         df = pd.DataFrame(columns = dfCol)
-        
-        # load data for mouse or all
-        if (mouseId=='all'):
-            for key in dict.keys():
+
+        # hardcode other depending on group
+        if (group == 'agg'):
+            others = ['balbc', 'mCD1']
+        elif (group == 'obs'):
+            others = ['OBSmCD1', 'obs']
+        elif (group == 'toy'):
+            others = ['toy', 'toyCD1']
+    
+        for key in dict.keys():
+            s = key.split('_')
+            if (s[0] == mouseId and s[2] in others):
                 dfTemp = dict[key]
-                s = key.split('_')
                 dfTemp["subject"] = s[0]
+                dfTemp['group'] = group
                 dfTemp["other"] = s[2]
                 dfTemp["day"] = s[1]
                 dfTemp["trial"] = s[3]
+                dfTemp = dfTemp[dfCol] # reordering columns
                 df = pd.concat([df,dfTemp])
-            df = df[dfCol] # reordering columns
-        else:
-            for key in dict.keys():
-                s = key.split('_')
-                if (s[0] == mouseId):
-                    dfTemp = dict[key]
-                    dfTemp["subject"] = s[0]
-                    dfTemp["other"] = s[2]
-                    dfTemp["day"] = s[1]
-                    dfTemp["trial"] = s[3]
-                    dfTemp = dfTemp[dfCol] # reordering columns
-                    df = pd.concat([df,dfTemp])
         
         # dropping any row with a missing value within the dataframe
         #df.dropna(inplace = True)
@@ -120,13 +124,19 @@ def load_and_wrangle(mouseId, path=None, overwrite=False):
         return df
 
 def get_regions_dataframe(df):
+    ''' 
+    get regions of neural activity recorded 
+    '''
+
     regions = df.columns.tolist()
     # drop columns that only have missing values
     for col in df.columns:
         if df[col].isna().sum() == len(df.index.tolist()): # dropping columns with only missing values
             regions.remove(col)
-            
+
+    # remove columns        
     regions.remove('day')
+    regions.remove('group')
     regions.remove('subject')
     regions.remove('other')
     regions.remove('trial')
@@ -141,7 +151,7 @@ def get_regions_dataframe(df):
     
     return regions
 
-def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
+def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
 
     ''' 
     ONLY WORKING FOR SINGLE FEATURE NOW
@@ -167,33 +177,28 @@ def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
     # loading path on my hard disk as default
     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
-    df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
-    days = np.unique(df['day'])
-    trials = np.unique(df['trial'])
+    data = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
+    days = np.unique(data['day'])
+    trials = np.unique(data['trial'])
 
-    X = np.empty((len(days)), dtype=object)
+    X = np.empty((len(days)), dtype=object) # binned features
+
     for ind_feature in range(len(features)):
-        a = np.empty((len(days)*len(trials)), dtype=object) # all features across sessions to get optimal bin partition
+        a = np.empty((len(days)*len(trials)), dtype=object) # all features across sessions 
         c = 0 # counting index
         for ind_day in range(0, len(days)): # day index
             for ind_trial in range(0,len(trials)): # trial index
-                if (ind_day == 8):
-                    other = 'mCD1'
-                else:
-                    other = 'balbc'
-                df = pd.read_parquet(f'../data/{animal}/{animal}_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
+                temp = data[data['day'] == days[ind_day]]
+                temp = temp[temp['trial'] == trials[ind_trial]].reset_index()
+                df = pd.read_parquet(f'../data/processed_features_020924_parquets/{animal}_{days[ind_day]}_{temp.loc[0,"other"]}_{trials[ind_trial]}_zscored_features.parquet')
                 a[c] = np.array(df[features[ind_feature]])
                 c = c + 1
 
+        # creating the bins
         all = np.concatenate(a)
-        # bin_edges = np.histogram_bin_edges(all, bins='fd') # optimal number of bins with fd method
         _, bin_edges = np.histogram(all, bins=Nbins)
-        # print(bin_edges.shape)
-        # plt.figure()
-        # plt.title(features[ind_feature])
-        # plt.hist(all, bins=bin_edges)
-        # plt.show()
         
+        # creating arrays with binned features
         c = 0
         for ind_day in range(0, len(days)): # day index
             X_temp = np.empty((len(trials)), dtype=object)
@@ -212,7 +217,8 @@ def get_design_X_GLM_features(animal, features, Nbins=50, path=None):
 
     return X_all, X, bin_centers
 
-def get_output_Y_GLM(animal, region, path=None):
+
+def get_output_Y_GLM(animal, group, region, path=None):
     ''' 
     function to prepare vector output Y (calcium populationa activity for one specific region) for GLM
 
@@ -233,27 +239,21 @@ def get_output_Y_GLM(animal, region, path=None):
     # loading path on my hard disk as default
     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
-    df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
+    df = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
     regions = get_regions_dataframe(df)
     days = np.unique(df['day'])
     trials = np.unique(df['trial'])
 
     if region not in regions:
-
         return np.nan, np.nan
     else:
         Y = np.empty((len(days)), dtype=object)
 
         for ind_day in range(0, len(days)): # day index
-            if (ind_day == 8):
-                other = 'mCD1'
-            else:
-                other = 'balbc'
             Y_temp = np.empty((len(trials)), dtype=object)
             for ind_trial in range(0,len(trials)): # trial index
                 dftemp = df[df['day'] == days[ind_day]]
                 dftemp = dftemp[dftemp['trial'] == trials[ind_trial]]
-                dftemp = dftemp[dftemp['other'] == other].reset_index()
                 Y_temp[ind_trial] = np.array(dftemp[region])
             Y[ind_day] = np.concatenate((Y_temp), axis=0)
         Y_all = np.concatenate(Y, axis=0) 

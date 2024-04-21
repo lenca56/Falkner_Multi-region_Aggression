@@ -8,30 +8,30 @@ import matplotlib as mpl
 from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split, KFold
+from sklearn.metrics import r2_score
 
-
-def PCAfunction(mouseId, path=None):
-    df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
-    temp = df.drop(columns=['subject','other','day','trial','unsupervised labels','supervised labels'])
+# def PCAfunction(mouseId, path=None):
+#     df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
+#     temp = df.drop(columns=['subject','other','day','trial','unsupervised labels','supervised labels'])
     
-    # filtering or averaging for certain days/trials
+#     # filtering or averaging for certain days/trials
 
-    # preparing matrix X
-    x = np.array(temp)
-    print("Variance for each brain region")
-    print(x.mean(axis=0))
+#     # preparing matrix X
+#     x = np.array(temp)
+#     print("Variance for each brain region")
+#     print(x.mean(axis=0))
 
-    n_comp=10
-    pca = PCA(n_components=n_comp)
-    y = pca.fit_transform(x)
-    c_explained_variance = np.cumsum(pca.explained_variance_ratio_)
-    plt.title(f'PCA - Mouse {mouseId}')
-    plt.ylabel("total explained variance")
-    plt.xlabel('components')
-    plt.bar(range(1,n_comp+1),c_explained_variance)
-    plt.xticks(range(1,n_comp+1))
-    plt.axhline(0.8,color='black')
-    plt.show()
+#     n_comp=10
+#     pca = PCA(n_components=n_comp)
+#     y = pca.fit_transform(x)
+#     c_explained_variance = np.cumsum(pca.explained_variance_ratio_)
+#     plt.title(f'PCA - Mouse {mouseId}')
+#     plt.ylabel("total explained variance")
+#     plt.xlabel('components')
+#     plt.bar(range(1,n_comp+1),c_explained_variance)
+#     plt.xticks(range(1,n_comp+1))
+#     plt.axhline(0.8,color='black')
+#     plt.show()
 
 # Linear Gaussian GLM model 
 def solution_linear_Gaussian_smoothing(X, Y, feature_start, circular, alpha):
@@ -83,6 +83,13 @@ def mse(X_true, Y_true, W_map):
 
     return np.linalg.norm(X_true @ W_map - Y_true) ** 2 / Y_true.shape[0]
 
+def compute_r_squared(X_true, Y_true, W_map):
+    '''
+    r_squared = 1 - ( || Y - Y_pred || ^ 2 ) /  ( || Y - mean(Y) || ^ 2)
+    '''
+    Y_pred = X_true @ W_map
+    return r2_score(Y_true, Y_pred)
+
 def split_data(N, Kfolds=5, blocks=100, random_state=42):
     ''' 
     splitting data function for cross-validation by giving out indices of test and train
@@ -120,7 +127,6 @@ def split_data(N, Kfolds=5, blocks=100, random_state=42):
     presentTrain = np.empty((Kfolds), dtype=object)
     presentTest = np.empty((Kfolds), dtype=object)
 
-
     # split session indices into blocks and get session indices for train and test
     yBlock = np.arange(0, N/blocks)
     kf = KFold(n_splits=Kfolds, shuffle=True, random_state=random_state) # shuffle=True and random_state=int for random splitting, otherwise it's consecutive
@@ -141,47 +147,7 @@ def split_data(N, Kfolds=5, blocks=100, random_state=42):
     return presentTrain, presentTest
 
 
-def fit_CV_linear_Gaussian_smoothing(animal, features, region, Nbin_values, alpha_values, path=None):
-    ''' 
-    fitting all days together
-
-    for only one feature for now
-
-    '''
-    # loading path on my hard disk as default
-    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-
-    W_map = np.empty((len(Nbin_values), len(alpha_values)), dtype=object)
-    train_mse = np.zeros((len(Nbin_values), len(alpha_values)))
-    test_mse = np.zeros((len(Nbin_values), len(alpha_values)))
-
-    for Nbin_ind in range(len(Nbin_values)):
-        Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curve
-
-        X_all, _, _ = get_design_X_GLM_features(animal, features=features, Nbins=Nbin, path=path)
-        Y_all, _ = get_output_Y_GLM(animal, region, path=path)
-
-        # Split data
-        X_train, X_test, Y_train, Y_test = train_test_split(X_all, Y_all, test_size=0.2, random_state=42)
-
-        for alpha_ind in range(len(alpha_values)):
-            alpha = alpha_values[alpha_ind] # regularizer hyperparameter
-   
-            # Fit to train data
-            W_map[Nbin_ind, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=[0, 1], alpha=alpha) # bias term and only one tuning curve
-
-            # MSE
-            train_mse[Nbin_ind, alpha_ind] = mse(X_train, Y_train, W_map[Nbin_ind, alpha_ind])
-            test_mse[Nbin_ind, alpha_ind] = mse(X_test, Y_test, W_map[Nbin_ind, alpha_ind])
-
-        
-        # find best alpha for this number of bins
-        # best_alpha = np.argmin(test_mse[Nbin_ind, :])
-
-
-    return W_map, train_mse, test_mse
-
-def fit_KFold_linear_Gaussian_smoothing(animal, features, circular_features, region, Nbin_values, alpha_values, K=5, blocks=100, path=None):
+def fit_KFold_linear_Gaussian_smoothing(animal, group, features, circular_features, region, Nbin_values, alpha_values, K=5, blocks=100, path=None):
     ''' 
     fitting all days together
 
@@ -195,16 +161,15 @@ def fit_KFold_linear_Gaussian_smoothing(animal, features, circular_features, reg
     train_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
     test_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
 
-    Y_all, _ = get_output_Y_GLM(animal, region, path=path)
+    Y_all, _ = get_output_Y_GLM(animal, group, region, path=path)
     presentTrain, presentTest = split_data(N=Y_all.shape[0], Kfolds=K, blocks=blocks, random_state=42)
 
     for Nbin_ind in range(len(Nbin_values)):
         Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curve
 
-        X_all, _, _ = get_design_X_GLM_features(animal, features=features, Nbins=Nbin, path=path)
+        X_all, _, _ = get_design_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=path)
 
         # Split data
-        
         for k in range(K):
         
             X_train, X_test, Y_train, Y_test = X_all[presentTrain[k]], X_all[presentTest[k]], Y_all[presentTrain[k]], Y_all[presentTest[k]]
