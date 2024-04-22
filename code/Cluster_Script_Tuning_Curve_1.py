@@ -22,7 +22,7 @@ featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid r
 circularList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 data_path = '../data'
-id = pd.DataFrame(columns=['animal','region']) # in total z=311 for the agg and obs animals
+id = pd.DataFrame(columns=['animal','region']) # in total z=267 for the agg and obs animals
 z = 0
 for animal in animalsAgg:
     group='agg'
@@ -50,18 +50,35 @@ region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(0,5.5,0.5)] 
-Nbin_values = [10, 30]
+alpha_values = [10**x for x in np.arange(1,8.5,0.5)] 
+Nbin_values = [20]
 K = 5
 
-W_map = np.empty((len(featuresList), K, len(Nbin_values), len(alpha_values)), dtype=object)
-train_mse = np.zeros((len(featuresList), K, len(Nbin_values), len(alpha_values)))
-test_mse = np.zeros((len(featuresList), K, len(Nbin_values), len(alpha_values)))
+W_map_mean = np.empty((len(featuresList), len(Nbin_values), len(alpha_values)), dtype=object)
+train_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)))
+test_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)))
+best_ind = np.empty((len(featuresList)), dtype=object)
+r2_best = np.zeros((len(featuresList)))
 
 for ind in range(len(featuresList)):
-    # fitting
-    W_map[ind, :, :, :], train_mse[ind, :, :, :], test_mse[ind, :, :, :] = fit_KFold_linear_Gaussian_smoothing(animal=animal, group=group, features=[featuresList[ind]], circular_features=[circularList[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, K=K, blocks=400, path=data_path)
+
+    # fitting K-fold
+    W_map, train_mse, test_mse = fit_KFold_linear_Gaussian_smoothing(animal=animal, group=group, features=[featuresList[ind]], circular_features=[circularList[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, K=K, blocks=400, path=data_path)
+
+    # average of fits
+    train_mse_mean[ind] = np.mean(train_mse, axis=0)
+    test_mse_mean[ind] = np.mean(test_mse, axis=0)
+    W_map_mean[ind] = np.mean(W_map, axis=0)
+
+    # finding best fit
+    best_ind[ind] = np.unravel_index(np.argmin(test_mse_mean[ind]), test_mse_mean[ind].shape)
+    W_map_best = W_map_mean[ind, best_ind[ind][0], best_ind[ind][1]]
+
+    # compute r-square for best fit
+    X_all, _, _ = get_design_X_GLM_features(animal, group, features=[featuresList[ind]], Nbins=Nbin_values[best_ind[ind][0]], path=data_path)
+    Y_all, _ = get_output_Y_GLM(animal, group, region, path=data_path)
+    r2_best[ind] = compute_r_squared(X_all, Y_all, W_map_best)
                                                                
 # saving
-np.savez(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}', W_map=W_map, train_mse=train_mse, test_mse=test_mse)
+np.savez(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}', W_map=W_map_mean, train_mse=train_mse_mean, test_mse=test_mse_mean, best_ind=best_ind, r2_best=r2_best)
 

@@ -185,9 +185,6 @@ def fit_KFold_linear_Gaussian_smoothing(animal, group, features, circular_featur
                 train_mse[k, Nbin_ind, alpha_ind] = mse(X_train, Y_train, W_map[k, Nbin_ind, alpha_ind])
                 test_mse[k, Nbin_ind, alpha_ind] = mse(X_test, Y_test, W_map[k, Nbin_ind, alpha_ind])
 
-        # find best alpha for this number of bins
-        # best_alpha = np.argmin(test_mse[Nbin_ind, :])
-
     return W_map, train_mse, test_mse
 
     
