@@ -12,7 +12,7 @@ import sys
 import os
 
 animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-animalsObs = ['29L','30R2','86L', '87L2'] # list of observer animals
+animalsObs = ['29L','30R2']#,'86L', '87L2'] # list of observer animals
 # animalsToy = ['86L2', '87B', '87L','87R2'] # NOT FITTING TOY FOR NOW BCS PARQUETS MISSING
 
 # featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms",'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle"]
@@ -26,7 +26,7 @@ id = pd.DataFrame(columns=['animal','region']) # in total z=311 for the agg and 
 z = 0
 for animal in animalsAgg:
     group='agg'
-    df = load_and_wrangle(mouseId=animal, group='agg', path=data_path, overwrite=True)
+    df = load_and_wrangle(mouseId=animal, group='agg', path=data_path, overwrite=False)
     regions = get_regions_dataframe(df)
     for region in regions:
         id.loc[z, 'animal'] = animal
@@ -35,7 +35,7 @@ for animal in animalsAgg:
         z += 1
 for animal in animalsObs:
     group = 'obs'
-    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=True)
+    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
     regions = get_regions_dataframe(df)
     for region in regions:
         id.loc[z, 'animal'] = animal
