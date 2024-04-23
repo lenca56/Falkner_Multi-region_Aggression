@@ -53,32 +53,31 @@ group = id.loc[idx, 'group']
 alpha_values = [10**x for x in np.arange(1,8.5,0.5)] 
 Nbin_values = [20]
 K = 5
+Ndays = 9
 
-W_map_mean = np.empty((len(featuresList), len(Nbin_values), len(alpha_values)), dtype=object)
-train_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)))
-test_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)))
-best_ind = np.empty((len(featuresList)), dtype=object)
-r2_best = np.zeros((len(featuresList)))
+W_map_mean = np.empty((len(featuresList), Ndays), dtype=object)
+train_mse_mean = np.zeros((len(featuresList), Ndays))
+test_mse_mean = np.zeros((len(featuresList), Ndays))
+r2 = np.zeros((len(featuresList), Ndays))
+
+# all day fits
+fits = np.load(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}.npz', allow_pickle=True)
+best_ind = fits['best_ind']
 
 for ind in range(len(featuresList)):
 
+    # getting best alpha and Nbin from fits of all days together
+    Nbin = Nbin_values[best_ind[ind][0]]
+    alpha = alpha_values[best_ind[ind][1]]
+
     # fitting K-fold
-    W_map, train_mse, test_mse = fit_KFold_linear_Gaussian_smoothing_all_days(animal=animal, group=group, features=[featuresList[ind]], circular_features=[circularList[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, K=K, blocks=400, path=data_path)
+    W_map, train_mse, test_mse, r2[ind] = fit_KFold_linear_Gaussian_smoothing_per_day(animal, group, features=[featuresList[ind]], circular_features=[circularList[ind]], region=region, Nbin=Nbin, alpha=alpha, K=K, blocks=400, path=data_path)
 
     # average of fits
     train_mse_mean[ind] = np.mean(train_mse, axis=0)
     test_mse_mean[ind] = np.mean(test_mse, axis=0)
     W_map_mean[ind] = np.mean(W_map, axis=0)
-
-    # finding best fit
-    best_ind[ind] = np.unravel_index(np.argmin(test_mse_mean[ind]), test_mse_mean[ind].shape)
-    W_map_best = W_map_mean[ind, best_ind[ind][0], best_ind[ind][1]]
-
-    # compute r-square for best fit
-    X_all, _, _ = get_design_X_GLM_features(animal, group, features=[featuresList[ind]], Nbins=Nbin_values[best_ind[ind][0]], path=data_path)
-    Y_all, _ = get_output_Y_GLM(animal, group, region, path=data_path)
-    r2_best[ind] = compute_r_squared(X_all, Y_all, W_map_best)
-                                                               
+                         
 # saving
-np.savez(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}', W_map=W_map_mean, train_mse=train_mse_mean, test_mse=test_mse_mean, best_ind=best_ind, r2_best=r2_best)
+np.savez(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_per-day_region={region}', W_map=W_map_mean, train_mse=train_mse_mean, test_mse=test_mse_mean, r2_best=r2)
 

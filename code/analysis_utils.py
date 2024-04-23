@@ -147,7 +147,7 @@ def split_data(N, Kfolds=5, blocks=100, random_state=42):
     return presentTrain, presentTest
 
 
-def fit_KFold_linear_Gaussian_smoothing(animal, group, features, circular_features, region, Nbin_values, alpha_values, K=5, blocks=100, path=None):
+def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circular_features, region, Nbin_values, alpha_values, K=5, blocks=100, path=None):
     ''' 
     fitting all days together
 
@@ -186,6 +186,48 @@ def fit_KFold_linear_Gaussian_smoothing(animal, group, features, circular_featur
                 test_mse[k, Nbin_ind, alpha_ind] = mse(X_test, Y_test, W_map[k, Nbin_ind, alpha_ind])
 
     return W_map, train_mse, test_mse
+
+def fit_KFold_linear_Gaussian_smoothing_per_day(animal, group, features, circular_features, region, Nbin, alpha, K=5, blocks=100, path=None):
+    ''' 
+    fitting each day separately
+
+    for only one feature fits for now
+
+    '''
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+
+    # total number of days
+    Ndays = 9
+
+    W_map = np.empty((K, Ndays), dtype=object)
+    train_mse = np.zeros((K, Ndays))
+    test_mse = np.zeros((K, Ndays))
+    r2 = np.zeros((Ndays))
+
+    _, Y = get_output_Y_GLM(animal, group, region, path=path)
+    _, X, _ = get_design_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=path)
+
+    if (X.shape[0] != Ndays):
+        raise Exception ("Total number of days is not 9 in X")
+    
+    for ind_day in range(Ndays):
+        presentTrain, presentTest = split_data(N=Y[ind_day].shape[0], Kfolds=K, blocks=blocks, random_state=42)
+        
+        # Split data in K folds
+        for k in range(K):
+            X_train, X_test, Y_train, Y_test = X[ind_day][presentTrain[k]], X[ind_day][presentTest[k]], Y[ind_day][presentTrain[k]], Y[ind_day][presentTest[k]]
+
+            # Fit to train data
+            W_map[k, ind_day] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=[0, 1], circular=[0, circular_features[0]], alpha=alpha) # bias term and only one tuning curve
+
+            # MSE
+            train_mse[k, ind_day] = mse(X_train, Y_train, W_map[k, ind_day])
+            test_mse[k, ind_day] = mse(X_test, Y_test, W_map[k, ind_day])
+
+        r2[ind_day] = compute_r_squared(X[ind_day], Y[ind_day], np.mean(W_map[:, ind_day], axis=0))
+
+    return W_map, train_mse, test_mse, r2
 
     
 
