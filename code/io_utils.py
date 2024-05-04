@@ -169,7 +169,7 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
     Returns:
     --------
     X_all: numpy array
-        array of behavioral features in time for all days together
+        array of behavioral features in time for all days together, except the last day
     X: array of vectors
         X[day] is an array of behavioral features in time given for a particular day
     '''
@@ -212,7 +212,7 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
                 c = c + 1    
             X[ind_day] = np.concatenate((X_temp), axis=0) # concatenate across trials within a day
             X[ind_day] = np.concatenate([np.ones((X[ind_day].shape[0], 1)), X[ind_day]], axis=1) # add bias term
-    X_all = np.concatenate(X, axis=0) # concatenate all days together
+    X_all = np.concatenate(X[:-1], axis=0) # concatenate all days together, EXCEPT last day
     bin_centers = (bin_edges[0:-1] + bin_edges[1:])/2
 
     return X_all, X, bin_centers
@@ -256,7 +256,7 @@ def get_output_Y_GLM(animal, group, region, path=None):
                 dftemp = dftemp[dftemp['trial'] == trials[ind_trial]]
                 Y_temp[ind_trial] = np.array(dftemp[region])
             Y[ind_day] = np.concatenate((Y_temp), axis=0)
-        Y_all = np.concatenate(Y, axis=0) 
+        Y_all = np.concatenate(Y[:-1], axis=0) 
 
         return Y_all, Y
 
