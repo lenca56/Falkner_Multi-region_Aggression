@@ -56,15 +56,15 @@ for animal in animalsToy:
         z += 1
 
 # read from cluster array in order to get parallelizations
-idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
+idx = 0 #int(os.environ["SLURM_ARRAY_TASK_ID"])
 animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
 print(animal)
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(1,9.5,0.5)] 
-Nbin_values = [20]
+alpha_values = [1,10] #[10**x for x in np.arange(1,9.5,0.5)] 
+Nbin_values = [2] #[20]
 K = 5
 
 W_map_mean = np.empty((len(featuresList), len(Nbin_values), len(alpha_values)), dtype=object)
