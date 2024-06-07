@@ -69,15 +69,17 @@ K = 5
 W_map_best = np.empty((len(featuresList)), dtype=object)
 best_ind = np.empty((len(featuresList)), dtype=object)
 r2_best = np.zeros((len(featuresList)))
+train_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)))
+test_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)))
 
-for ind in range(len(featuresList)):
+for ind in range(len(featuresList)): # for each feature separately
 
     # fitting K-fold
     _, train_mse, test_mse = fit_KFold_linear_Gaussian_smoothing_all_days(animal=animal, group=group, features=[featuresList[ind]], circular_features=[circularList[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, K=K, blocks=400, path=data_path)
 
     # average of fits across folds
-    train_mse_mean = np.mean(train_mse, axis=0)
-    test_mse_mean = np.mean(test_mse, axis=0)
+    train_mse_mean[ind] = np.mean(train_mse, axis=0)
+    test_mse_mean[ind] = np.mean(test_mse, axis=0)
 
     # finding hyperparameters for best fit by 5-fold CV
     best_ind[ind] = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)
@@ -93,5 +95,5 @@ for ind in range(len(featuresList)):
     r2_best[ind] = compute_r_squared(X_all, Y_all, W_map_best[ind])
                                                                
 # saving
-np.savez(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}', W_map_best=W_map_best, best_ind=best_ind, r2_best=r2_best)
+np.savez(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}', W_map_best=W_map_best, train_mse=train_mse_mean, test_mse=test_mse_mean, best_ind=best_ind, r2_best=r2_best)
 
