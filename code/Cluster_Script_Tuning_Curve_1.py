@@ -22,28 +22,28 @@ featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid r
 circularList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 data_path = '../data'
-id = pd.DataFrame(columns=['animal','region']) # in total z=311 for the agg and obs animals
+id = pd.DataFrame(columns=['animal','region']) # in total z=399 for the agg and obs animals
 z = 0
 
-group='agg'
-for animal in animalsAgg:
-    df = load_and_wrangle(mouseId=animal, group='agg', path=data_path, overwrite=False)
-    regions = get_regions_dataframe(df)
-    for region in regions:
-        id.loc[z, 'animal'] = animal
-        id.loc[z, 'region'] = region
-        id.loc[z, 'group'] = group
-        z += 1
+# group='agg'
+# for animal in animalsAgg:
+#     df = load_and_wrangle(mouseId=animal, group='agg', path=data_path, overwrite=False)
+#     regions = get_regions_dataframe(df)
+#     for region in regions:
+#         id.loc[z, 'animal'] = animal
+#         id.loc[z, 'region'] = region
+#         id.loc[z, 'group'] = group
+#         z += 1
 
-group = 'obs'
-for animal in animalsObs:
-    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
-    regions = get_regions_dataframe(df)
-    for region in regions:
-        id.loc[z, 'animal'] = animal
-        id.loc[z, 'region'] = region
-        id.loc[z, 'group'] = group
-        z += 1
+# group = 'obs'
+# for animal in animalsObs:
+#     df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
+#     regions = get_regions_dataframe(df)
+#     for region in regions:
+#         id.loc[z, 'animal'] = animal
+#         id.loc[z, 'region'] = region
+#         id.loc[z, 'group'] = group
+#         z += 1
 
 group = 'toy'
 for animal in animalsToy:
@@ -60,6 +60,7 @@ idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
 animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
+print(animal)
 
 # setting hyperparameters
 alpha_values = [10**x for x in np.arange(1,9.5,0.5)] 
