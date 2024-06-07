@@ -13,7 +13,7 @@ import os
 
 animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
 animalsObs = ['29L','30R2','86L', '87L2'] # list of observer animals
-# animalsToy = ['86L2', '87B', '87L','87R2'] # NOT FITTING TOY FOR NOW BCS PARQUETS MISSING
+animalsToy = ['86L2', '87B', '87L','87R2'] # NOT FITTING TOY FOR NOW BCS PARQUETS MISSING
 
 # featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms",'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle"]
 # circularList = [0, 0, 0, 0, 0, 1, 1, 1]
@@ -45,6 +45,16 @@ for animal in animalsObs:
         id.loc[z, 'group'] = group
         z += 1
 
+group = 'toy'
+for animal in animalsToy:
+    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
+    regions = get_regions_dataframe(df)
+    for region in regions:
+        id.loc[z, 'animal'] = animal
+        id.loc[z, 'region'] = region
+        id.loc[z, 'group'] = group
+        z += 1
+
 # read from cluster array in order to get parallelizations
 idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
 animal = id.loc[idx,'animal']
@@ -52,7 +62,7 @@ region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(1,8.5,0.5)] 
+alpha_values = [10**x for x in np.arange(1,9.5,0.5)] 
 Nbin_values = [20]
 K = 5
 
