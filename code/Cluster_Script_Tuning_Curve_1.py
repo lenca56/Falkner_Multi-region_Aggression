@@ -82,7 +82,7 @@ for ind in range(len(featuresList)): # for each feature separately
     test_mse_mean[ind] = np.mean(test_mse, axis=0)
 
     # finding hyperparameters for best fit by 5-fold CV
-    best_ind[ind] = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)
+    best_ind[ind] = np.unravel_index(np.argmin(test_mse_mean[ind]), test_mse_mean[ind].shape)
     Nbin_best = Nbin_values[best_ind[ind][0]]
     alpha_best = alpha_values[best_ind[ind][1]]
 
