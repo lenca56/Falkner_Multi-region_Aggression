@@ -147,7 +147,7 @@ def split_data(N, Kfolds=5, blocks=100, random_state=42):
     return presentTrain, presentTest
 
 
-def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circular_features, region, Nbin_values, alpha_values, K=5, blocks=100, path=None):
+def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circular_features, region, Nbin_values, alpha_values, behavioral_filter=None, K=5, blocks=100, path=None):
     ''' 
     fitting all days together
 
@@ -162,13 +162,20 @@ def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circul
     test_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
 
     Y_all, _ = get_output_Y_GLM(animal, group, region, path=path)
+    # filtering for certain behaviors only
+    if behavioral_filter is not None:
+        indices_all, _ = index_filter_design_matrices_for_specific_behaviors(animal, group, behavior_label=behavioral_filter, path=path)
+        Y_all = Y_all[indices_all]
     presentTrain, presentTest = split_data(N=Y_all.shape[0], Kfolds=K, blocks=blocks, random_state=42)
-
+    
     for Nbin_ind in range(len(Nbin_values)):
         Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curve
 
         X_all, _, _ = get_design_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=path)
-
+        # filtering for certain behaviors only
+        if behavioral_filter is not None:
+            X_all = X_all[indices_all]
+        
         # Split data
         for k in range(K):
         

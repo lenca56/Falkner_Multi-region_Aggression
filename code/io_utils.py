@@ -260,6 +260,32 @@ def get_output_Y_GLM(animal, group, region, path=None):
 
         return Y_all, Y
 
+def index_filter_design_matrices_for_specific_behaviors(animal, group, behavior_label, path=None):
+    ''' 
+    Currently working for supervised labels only (0 no attack - 1 attack)
+
+    Parameters:
+    -----------
+        behavior_label: int
+            'attack label' in dataframe
+    '''
+    data = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
+    days = np.unique(data['day'])
+
+    indices_filter = np.empty((len(days)), dtype=object)
+    number_frames = 0
+    for ind_day in range(0, len(days)): # day index
+        temp = data[data['day'] == days[ind_day]].reset_index() # new indices for each day
+        temp = temp[temp['attack labels']==behavior_label]
+        indices_filter[ind_day] = temp.index.tolist()
+    
+    temp = data[data['day'] != days[-1]] # all except last day
+    temp = temp[temp['attack labels']==behavior_label]
+    indices_all = temp.index.tolist()
+            
+    return indices_all, indices_filter
+
+
 
 
 
