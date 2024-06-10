@@ -19,8 +19,6 @@ animalsToy = ['86L2', '87B', '87L','87R2'] # list of toy animals
 # circularList = [0, 0, 0, 0, 0, 1, 1, 1]
 featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle",
    "resident tti2head", "intruder tti2head", "resident tailbase2head angle", "intruder tailbase2head angle"] # potentially add more
-circularList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=399 for the agg and obs animals
 z = 0
@@ -89,7 +87,7 @@ for ind in range(len(featuresList)): # for each feature separately
     # fitting whole dataset with best hyperparameters
     X_all, _, _ = get_design_X_GLM_features(animal, group=group, features=[featuresList[ind]], Nbins=Nbin_best, path=data_path)
     Y_all, _ = get_output_Y_GLM(animal, group, region, path=data_path)
-    W_map_best[ind] = solution_linear_Gaussian_smoothing(X_all, Y_all, feature_start=[0, 1], circular=[0, 0], alpha=alpha_best) # bias term and only one tuning curve
+    W_map_best[ind] = solution_linear_Gaussian_smoothing(X_all, Y_all, feature_start=[1],  alpha=alpha_best) # bias term and only one tuning curve
 
     # compute r-square for best fit
     r2_best[ind] = compute_r_squared(X_all, Y_all, W_map_best[ind])
