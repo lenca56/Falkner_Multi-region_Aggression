@@ -22,5 +22,7 @@ featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid r
 circularList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 data_path = '../data'
-id = pd.DataFrame(columns=['animal','region']) # in total z=311 for the agg and obs animals
+id = pd.DataFrame(columns=['animal','region']) # in total z=399 for the agg and obs animals
 z = 0
+
+# READ WHAT WAS BEST MODEL FOR FEATURE

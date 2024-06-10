@@ -34,9 +34,10 @@ from sklearn.metrics import r2_score
 #     plt.show()
 
 # Linear Gaussian GLM model 
-def solution_linear_Gaussian_smoothing(X, Y, feature_start, circular, alpha):
+def solution_linear_Gaussian_smoothing(X, Y, feature_start, alpha_features):
     ''' 
-    single features are also regularized (like with ridge)
+    Smoothing regularizer for tuning curves
+    single-variable tuning curves are also regularized (like with ridge)
 
     Parameters:
     ___________
@@ -45,39 +46,41 @@ def solution_linear_Gaussian_smoothing(X, Y, feature_start, circular, alpha):
     Y: numpy vector
         target (calcium activity of a region)
     feature_start: list of int 
-        indices for first coeff of a feature-specific tuning curve (in ascending order), including bias at 0
-    circular: list of 0s and 1s (same length as feature_start!)
-        1 if that tuning curve is circular and needs smoothing at the ends
+        indices for first coeff of a feature-specific tuning curve (in ascending order), excluding bias term 0 
     alpha: float
         strength of regularization hyperparameter
     '''
-    feature_start.append(X.shape[1]) # adding last possible index to signal end of for loop
+    # Checking that the first column is a bias term
+    if X[:,0].sum() != X.shape[0] or feature_start[0]!=1:
+        raise Exception('First column should have only 1s to reflect the bias term and features start at index 1')
 
-    L = np.zeros((X.shape[1], X.shape[1]))
-    for ind in range(len(feature_start)-1):
-        L[feature_start[ind], feature_start[ind]] = 1 # first coeff in tuning curve
+    L_features = np.zeros((len(feature_start)+1, X.shape[1], X.shape[1])) # prior for each feature separately
+
+    feature_start.append(X.shape[1]) # adding last index to signal end for loop
+
+    L_features[0, 0, 0] = 1 # bias term has regularizer hyperparameter 1
+
+    for ind in range(0, len(feature_start)-1):
+       
         for t in range(feature_start[ind]+1, feature_start[ind+1]):
-            L[t,t] = 2
-            L[t,t-1] = -1
-            L[t-1,t] = -1
-
-        # check if feature is circular and needs smoothing at its ends
-        if circular[ind] == 1: # connecting first and last point of tuning curve
-            L[feature_start[ind], feature_start[ind]] = 2
-            L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 2
-            L[feature_start[ind], feature_start[ind+1]-1] = -1
-            L[feature_start[ind+1]-1, feature_start[ind]] = -1
-        else: 
-            L[feature_start[ind], feature_start[ind]] = 1
-            L[feature_start[ind+1]-1, feature_start[ind+1]-1] = 1
+            L_features[ind+1, t,t] = 2
+            L_features[ind+1, t,t-1] = -1
+            L_features[ind+1, t-1,t] = -1
+        
+        L_features[ind+1, feature_start[ind], feature_start[ind]] = 1 # first coeff in tuning curve
+        L_features[ind+1, feature_start[ind+1]-1, feature_start[ind+1]-1] = 1 # last coeff in tuning curve
 
         if feature_start[ind+1] - feature_start[ind] == 1: # only one point in tuning curve
-            L[feature_start[ind], feature_start[ind]] = 1
+            L_features[ind+1, feature_start[ind], feature_start[ind]] = 1
         elif feature_start[ind+1] - feature_start[ind] == 2: # only two points in tuning curve
-            L[feature_start[ind], feature_start[ind]] = 1
-            L[feature_start[ind]+1, feature_start[ind]+1] = 1
+            L_features[ind+1, feature_start[ind], feature_start[ind]] = 1
+            L_features[ind+1, feature_start[ind]+1, feature_start[ind]+1] = 1
 
-    return np.linalg.solve(X.T @ X + alpha * L, X.T @ Y) 
+        L_features[ind+1] = L_features[ind+1] * alpha_features[ind] # multiplying by strength of prior for each feature
+    
+    L = np.sum(L_features, axis = 0)
+
+    return np.linalg.solve(X.T @ X + L, X.T @ Y) 
 
 def mse(X_true, Y_true, W_map):
 
@@ -146,12 +149,11 @@ def split_data(N, Kfolds=5, blocks=100, random_state=42):
 
     return presentTrain, presentTest
 
-
-def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circular_features, region, Nbin_values, alpha_values, behavioral_filter=None, K=5, blocks=100, path=None):
+def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, region, Nbin_values, alpha_values, alpha_features_before=[], behavioral_filter=None, K=5, blocks=100, path=None):
     ''' 
     fitting all days together
-
-    for only one feature fits for now
+    all tuning curves have the same length 
+    only last feature in features list has different alpha_values, others have alpha_features_before
 
     '''
     # loading path on my hard disk as default
@@ -161,6 +163,9 @@ def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circul
     train_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
     test_mse = np.zeros((K, len(Nbin_values), len(alpha_values)))
 
+    if (len(features) != 1 + len(alpha_features_before)):
+        raise Exception('Alpha for all features except last one should be given a priori')
+
     Y_all, _ = get_output_Y_GLM(animal, group, region, path=path)
     # filtering for certain behaviors only
     if behavioral_filter is not None:
@@ -169,9 +174,10 @@ def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circul
     presentTrain, presentTest = split_data(N=Y_all.shape[0], Kfolds=K, blocks=blocks, random_state=42)
     
     for Nbin_ind in range(len(Nbin_values)):
-        Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curve
+        Nbin = Nbin_values[Nbin_ind] # number of bins for tuning curves
 
         X_all, _, _ = get_design_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=path)
+
         # filtering for certain behaviors only
         if behavioral_filter is not None:
             X_all = X_all[indices_all]
@@ -184,9 +190,11 @@ def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, circul
             for alpha_ind in range(len(alpha_values)):
                 # regularizer hyperparameter
                 alpha = alpha_values[alpha_ind] 
-    
+                alpha_features = alpha_features_before + [alpha] # only last feature is being tested with different alpha's
+                feature_start = [1 + Nbin * x for x in range(len(features))] # start of features
+
                 # Fit to train data
-                W_map[k, Nbin_ind, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=[0, 1], circular=[0, circular_features[0]], alpha=alpha) # bias term and only one tuning curve
+                W_map[k, Nbin_ind, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=feature_start, alpha_features=alpha_features) # bias term and only one tuning curve
 
                 # MSE
                 train_mse[k, Nbin_ind, alpha_ind] = mse(X_train, Y_train, W_map[k, Nbin_ind, alpha_ind])

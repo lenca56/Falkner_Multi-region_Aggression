@@ -154,7 +154,7 @@ def get_regions_dataframe(df):
 def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
 
     ''' 
-    ONLY WORKING FOR SINGLE FEATURE NOW
+    Work for multiple features now
 
     Parameters:
     ----------
@@ -197,7 +197,7 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
         # creating the bins
         all = np.concatenate(a)
         _, bin_edges = np.histogram(all, bins=Nbins)
-        
+            
         # creating arrays with binned features
         c = 0
         for ind_day in range(0, len(days)): # day index
@@ -210,13 +210,20 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
                     ind_binned = list(set(ind_lower).intersection(set(ind_upper)))
                     X_temp[ind_trial][ind_binned, ind_bin] = 1
                 c = c + 1    
-            X[ind_day] = np.concatenate((X_temp), axis=0) # concatenate across trials within a day
-            X[ind_day] = np.concatenate([np.ones((X[ind_day].shape[0], 1)), X[ind_day]], axis=1) # add bias term
+
+            if (ind_feature > 0): 
+                X[ind_day] = np.concatenate([X[ind_day], np.concatenate((X_temp), axis=0)], axis=1) # concatenate across trials within a day
+            else:
+                X[ind_day] = np.concatenate((X_temp), axis=0)
+
+    # add bias term as first coulumns
+    for ind_day in range(0, len(days)): # day index
+        X[ind_day] = np.concatenate([np.ones((X[ind_day].shape[0], 1)), X[ind_day]], axis=1) 
+
     X_all = np.concatenate(X[:-1], axis=0) # concatenate all days together, EXCEPT last day
     bin_centers = (bin_edges[0:-1] + bin_edges[1:])/2
 
     return X_all, X, bin_centers
-
 
 def get_output_Y_GLM(animal, group, region, path=None):
     ''' 
