@@ -54,7 +54,7 @@ for animal in animalsToy:
         z += 1
 
 # read from cluster array in order to get parallelizations
-idx = 0 #int(os.environ["SLURM_ARRAY_TASK_ID"])
+idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
 animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
@@ -80,7 +80,7 @@ for ind in range(len(featuresList)):
     alpha = alpha_values[best_ind[ind][1]]
 
     # fitting K-fold
-    W_map[ind], train_mse[ind], test_mse[ind], r2[ind] = fit_linear_Gaussian_smoothing_per_day(animal, group, features=[featuresList[ind]], region=region, Nbin=Nbin, alpha=alpha, path=None)
+    W_map[ind], train_mse[ind], test_mse[ind], r2[ind] = fit_linear_Gaussian_smoothing_per_day(animal, group, features=[featuresList[ind]], region=region, Nbin=Nbin, alpha=alpha, path=data_path)
                          
 # saving
 np.savez(f'../data/{animal}/{animal}_{group}_MAP-estimation_per-day_region={region}', W_map=W_map, train_mse=train_mse, test_mse=test_mse, r2=r2)
