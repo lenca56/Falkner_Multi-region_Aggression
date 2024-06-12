@@ -54,7 +54,7 @@ for animal in animalsToy:
         z += 1
 
 # read from cluster array in order to get parallelizations
-idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
+idx = 0 #int(os.environ["SLURM_ARRAY_TASK_ID"])
 animal = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
@@ -73,7 +73,6 @@ r2 = np.zeros((len(featuresList), Ndays))
 # all day fits
 fits = np.load(f'../data/{animal}/{animal}_{group}_KFold={K}_MAP-estimation_region={region}.npz', allow_pickle=True)
 best_ind = fits['best_ind']
-
 for ind in range(len(featuresList)):
 
     # getting best alpha and Nbin from fits of all days together
