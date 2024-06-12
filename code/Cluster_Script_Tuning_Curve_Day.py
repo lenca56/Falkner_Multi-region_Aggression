@@ -19,7 +19,6 @@ animalsToy = ['86L2', '87B', '87L','87R2'] # list of toy animals
 # circularList = [0, 0, 0, 0, 0, 1, 1, 1]
 featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle",
    "resident tti2head", "intruder tti2head", "resident tailbase2head angle", "intruder tailbase2head angle"] # potentially add more
-circularList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=399
