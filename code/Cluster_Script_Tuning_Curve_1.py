@@ -60,7 +60,7 @@ region = id.loc[idx,'region']
 group = id.loc[idx, 'group']
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(1,9.5,0.5)] 
+alpha_values = [10**x for x in np.arange(1,6.5,0.5)] 
 Nbin_values = [20]
 K = 5
 
@@ -73,7 +73,7 @@ test_mse_mean = np.zeros((len(featuresList), len(Nbin_values), len(alpha_values)
 for ind in [0,1]: #range(len(featuresList)): # for each feature separately
 
     # fitting K-fold
-    _, train_mse, test_mse = fit_KFold_linear_Gaussian_smoothing_all_days(animal=animal, group=group, features=[featuresList[ind]], circular_features=[circularList[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, K=K, blocks=400, path=data_path)
+    _, train_mse, test_mse = fit_KFold_linear_Gaussian_smoothing_all_days(animal=animal, group=group, features=[featuresList[ind]], region=region, Nbin_values=Nbin_values, alpha_values=alpha_values, K=K, blocks=400, path=data_path)
 
     # average of fits across folds
     train_mse_mean[ind] = np.mean(train_mse, axis=0)

@@ -215,34 +215,35 @@ def behaviorDistributions(mouseId,path=None,type='unsupervised'):
     plt.xticks(classes)
     plt.show()
 
+
 # function to plot histograms of features values for an animal
-def histogram_feature(animal, features, path=None):
+def histogram_feature(animal, group, features, ind_day=8, path=None):
     
     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
-    df = load_and_wrangle(mouseId=animal, path=path, overwrite=False)
+    df = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
     days = np.unique(df['day'])
     trials = np.unique(df['trial'])
 
     X = np.empty((len(days)), dtype=object)
     for ind_feature in range(len(features)):
-        a = np.empty((len(days)*len(trials)), dtype=object) # all features across sessions to get optimal bin partition
+        a = np.empty((len(trials)), dtype=object) # all features across sessions to get optimal bin partition
         c = 0 # counting index
-        for ind_day in range(0, len(days)): # day index
-            for ind_trial in range(0,len(trials)): # trial index
-                if (ind_day == 8):
-                    other = 'mCD1'
-                else:
-                    other = 'balbc'
-                df = pd.read_parquet(f'../data/{animal}/{animal}_{days[ind_day]}_{other}_{trials[ind_trial]}_zscored_features.parquet')
-                a[c] = np.array(df[features[ind_feature]])
-                c = c + 1
+        for ind_trial in range(0,len(trials)): # trial index
+            temp = df[df['day'] == days[ind_day]]
+            temp = temp[temp['trial'] == trials[ind_trial]].reset_index()
+            behav = pd.read_parquet(f'../data/processed_features_020924_parquets/{animal}_{days[ind_day]}_{temp.loc[0,"other"]}_{trials[ind_trial]}_zscored_features.parquet')
+            a[c] = np.array(behav[features[ind_feature]])
+            c = c + 1
+            
 
-        all = np.concatenate(a)
+        all = np.concatenate(a, axis=0)
 
         bin_edges = np.histogram_bin_edges(all, bins='fd') # optimal number of bins with fd method
         # _, bin_edges = np.histogram(all, bins=Nbins)
         plt.figure()
-        plt.title(features[ind_feature])
+        plt.title(f' {animal} ({group}) - Day {ind_day+1}')
+        plt.xlabel(features[ind_feature] + ' histogram')
         plt.hist(all, bins=bin_edges)
         plt.show()
+

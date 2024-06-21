@@ -267,6 +267,43 @@ def get_output_Y_GLM(animal, group, region, path=None):
 
         return Y_all, Y
 
+def get_observed_all_Y(animal, group, path=None):
+    ''' 
+    function to get multi-region observed activity Y for each session
+
+    Parameters:
+    ----------
+    animal: str
+        animal ID
+
+    Returns:
+    --------
+    Y_all: numpy array
+        vector of calcium activity of the given region for all sessions together
+    Y: array of vectors
+        Y[day] is a vector of calcium activity in the region given for a particular session
+    '''
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
+    df = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
+    regions = get_regions_dataframe(df)
+    days = np.unique(df['day'])
+    trials = np.unique(df['trial'])
+
+
+    Y = np.empty((len(days)*len(trials)), dtype=object)
+
+    for ind_day in range(0, len(days)): # day index
+        for ind_trial in range(0,len(trials)): # trial index
+
+            dftemp = df[df['day'] == days[ind_day]]
+            dftemp = dftemp[dftemp['trial'] == trials[ind_trial]]
+            dftemp = dftemp.drop(columns=['subject','group','other','day','trial','unsupervised labels', 'attack labels'])
+            Y[ind_day* len(trials) + ind_trial] = np.array(dftemp)
+
+    return Y
+
 def index_filter_design_matrices_for_specific_behaviors(animal, group, behavior_label, path=None):
     ''' 
     Currently working for supervised labels only (0 no attack - 1 attack)

@@ -149,6 +149,8 @@ def split_data(N, Kfolds=5, blocks=100, random_state=42):
 
     return presentTrain, presentTest
 
+# def find_best_alpha_from_day_9(animal, group, features, region, alpha_values, alpha_features_before=[]):
+
 def fit_KFold_linear_Gaussian_smoothing_all_days(animal, group, features, region, Nbin_values, alpha_values, alpha_features_before=[], behavioral_filter=None, K=5, blocks=100, path=None):
     ''' 
     fitting all days together
