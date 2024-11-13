@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.metrics import r2_score
 
+
 # def PCAfunction(mouseId, path=None):
 #     df = load_and_wrangle(mouseId=mouseId, path=path, overwrite=False)
 #     temp = df.drop(columns=['subject','other','day','trial','unsupervised labels','supervised labels'])

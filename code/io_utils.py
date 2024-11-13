@@ -8,9 +8,10 @@ import pickle
 """
 
 animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-animalsObs = ['29L','30R2','86L', '87L2'] # list of observer animals
-animalsToy = ['86L2', '87B', '87L','87R2']
+animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
+animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
 animalsAll = animalsAgg + animalsObs + animalsToy
+groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
 # will require Path object
 def check_exist(mouseId, group='agg', path=None):
@@ -51,7 +52,7 @@ def load_and_wrangle(mouseId, group='agg', path=None, overwrite=False):
     """
     Updated function for loading & cleaning individual mouse .csv file
     Data comes from fiber photometry (Ca+2 traces) from either inhibitory or excitatory populations across multipe regions 
-    and one DA leve
+    and one DA level
 
     params:
     -------
@@ -77,7 +78,7 @@ def load_and_wrangle(mouseId, group='agg', path=None, overwrite=False):
     
     else:
         # Load data into dictionary
-        with open('../data/fully_labeled_traces_041824_nonznorm.pickle', 'rb') as handle:
+        with open('../data/fully_labeled_traces_feats3_071924.pickle', 'rb') as handle:
             dict = pickle.load(handle)
 
         # create dataframe
@@ -154,7 +155,7 @@ def get_regions_dataframe(df):
 def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
 
     ''' 
-    Work for multiple features now
+    Works for multiple features now
 
     Parameters:
     ----------
