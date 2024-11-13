@@ -226,6 +226,74 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
 
     return X_all, X, bin_centers
 
+def get_design_day9_X_GLM_features(animal, group, features, Nbins=10, path=None):
+
+    ''' 
+    Works for multiple features now
+
+    Parameters:
+    ----------
+    animal: str
+        animal ID
+    variables: list of str
+        behavioral variables to be include in the design matrix
+    timelags: list of [int,int]
+        both positive
+
+
+    Returns:
+    --------
+    X_all: numpy array
+        array of behavioral features in time for all days together, except the last day
+    X: array of vectors
+        X[day] is an array of behavioral features in time given for a particular day
+    '''
+
+    # loading path on my hard disk as default
+    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
+    data = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
+    trials = np.unique(data['trial'])
+    data = data[data['day'] == 'd9']
+
+    for ind_feature in range(len(features)):
+        a = np.empty((len(trials)), dtype=object) # all features across sessions 
+        c = 0 # counting index
+        
+        for ind_trial in range(0,len(trials)): # trial index
+            temp = data[data['trial'] == trials[ind_trial]].reset_index()
+            df = pd.read_parquet(f'../data/processed_features_020924_parquets/{animal}_d9_{temp.loc[0,"other"]}_{trials[ind_trial]}_zscored_features.parquet')
+            a[c] = np.array(df[features[ind_feature]])
+            c = c + 1
+
+        # creating the bins
+        all = np.concatenate(a)
+        _, bin_edges = np.histogram(all, bins=Nbins)
+            
+        # creating arrays with binned features
+        c = 0
+        X_temp = np.empty((len(trials)), dtype=object)
+        for ind_trial in range(0,len(trials)): # trial index
+            X_temp[ind_trial] = np.zeros((a[c].shape[0], Nbins))
+            for ind_bin in range(Nbins):
+                ind_lower = np.argwhere(a[c] >=  bin_edges[ind_bin]).flatten()
+                ind_upper = np.argwhere(a[c] <  bin_edges[ind_bin+1]).flatten()
+                ind_binned = list(set(ind_lower).intersection(set(ind_upper)))
+                X_temp[ind_trial][ind_binned, ind_bin] = 1
+            c = c + 1    
+
+        if (ind_feature > 0): 
+            X = np.concatenate([X, np.concatenate((X_temp), axis=0)], axis=1) # concatenate across trials within a day
+        else:
+            X = np.concatenate((X_temp), axis=0)
+
+    # add bias term as first coulumns
+    X = np.concatenate([np.ones((X.shape[0], 1)), X], axis=1) 
+
+    bin_centers = (bin_edges[0:-1] + bin_edges[1:])/2
+
+    return X, bin_centers
+
 def get_output_Y_GLM(animal, group, region, path=None):
     ''' 
     function to prepare vector output Y (calcium populationa activity for one specific region) for GLM

@@ -11,9 +11,12 @@ import scipy
 import sys
 import os
 
-animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
-animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
+animalsAgg = ['29L','3095']
+animalsObs = []
+animalsToy = []
+# animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
+# animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
+# animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
 animalsAll = animalsAgg + animalsObs + animalsToy
 groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
@@ -24,27 +27,10 @@ featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid r
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=399
 z = 0
-for animal in animalsAgg:
-    group='agg'
-    df = load_and_wrangle(mouseId=animal, group='agg', path=data_path, overwrite=True)
-    regions = get_regions_dataframe(df)
-    for region in regions:
-        id.loc[z, 'animal'] = animal
-        id.loc[z, 'region'] = region
-        id.loc[z, 'group'] = group
-        z += 1
-for animal in animalsObs:
-    group = 'obs'
-    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=True)
-    regions = get_regions_dataframe(df)
-    for region in regions:
-        id.loc[z, 'animal'] = animal
-        id.loc[z, 'region'] = region
-        id.loc[z, 'group'] = group
-        z += 1
-for animal in animalsToy:
-    group = 'toy'
-    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=True)
+for ind in range(len(animalsAll)):
+    animal = animalsAll[ind]
+    group = groupsAll[ind]
+    df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
     regions = get_regions_dataframe(df)
     for region in regions:
         id.loc[z, 'animal'] = animal
@@ -53,59 +39,147 @@ for animal in animalsToy:
         z += 1
 print(z)
 
-# # read from cluster array in order to get parallelizations
-# idx =  int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
-# animal = id.loc[idx,'animal']
-# region = id.loc[idx,'region']
-# group = id.loc[idx, 'group']
+# read from cluster array in order to get parallelizations
+idx = 0 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
+animal_without = id.loc[idx,'animal']
+region = id.loc[idx,'region']
+group_without = id.loc[idx, 'group']
 
-# # setting hyperparameters
-# alpha_values = [10**x for x in np.arange(1,6.5,0.5)] 
-# Nbin = 20
-# K = 5
-# Ndays = 9
-# Nday_last = 8
+# setting hyperparameters
+alpha_values = [10**x for x in np.arange(1,6.5,0.5)] 
+Nbin = 20
+K = 3
 
-# W_map = np.empty((len(featuresList), Ndays), dtype=object)
-# train_mse = np.zeros((len(featuresList), Ndays))
-# test_mse = np.zeros((len(featuresList), Ndays))
-# r2 = np.zeros((len(featuresList), Ndays))
+flag_all = 0
+flag_group = 0
 
-# for ind in range(len(featuresList)):
+Y_all_without = []
+X_all_without = np.empty((len(featuresList)), dtype=object)
+Y_group_without = []
+X_group_without = np.empty((len(featuresList)), dtype=object)
 
-#     features = [featuresList[ind]]
-#     Y_all, Y = get_output_Y_GLM(animal, group, region, path=data_path)
-#     X_all, X, _ = get_design_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
-#     W_temp = np.empty((K, len(alpha_values)), dtype=object)
-#     train_mse_temp = np.zeros((K, len(alpha_values)))
-#     test_mse_temp = np.zeros((K, len(alpha_values)))
+for ind in range(len(animalsAll)):
+    animal = animalsAll[ind]
+    group = groupsAll[ind]
 
-#     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
-#     for k in range(K):
-#         presentTrain, presentTest = split_data(N=Y[Nday_last].shape[0], Kfolds=K, blocks=400, random_state=42)
-#         X_train, X_test, Y_train, Y_test = X[Nday_last][presentTrain[k]], X[Nday_last][presentTest[k]], Y[Nday_last][presentTrain[k]], Y[Nday_last][presentTest[k]]
+    if animal != animal_without or group != group_without:
+        temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
+        temp_df = temp_df[temp_df['day']=='d9'] # only day 9
+        if region in temp_df.columns:
+            if group == group_without:
+                Y_all_without.append(np.array(temp_df[region]))
+                Y_group_without.append(np.array(temp_df[region]))
+                for ind_feature in range(len(featuresList)):
+                    features = [featuresList[ind_feature]]
+                    Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
+                    if flag_group == 0:
+                        X_group_without[ind_feature] = np.copy(Xtemp)
+                    else:
+                        X_group_without[ind_feature] = np.concatenate((X_group_without[ind_feature], Xtemp))
+                    
+                    if flag_all == 0:
+                        X_all_without[ind_feature] = np.copy(Xtemp)
+                    else:
+                        X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
+                
+                flag_group = 1
+                flag_all = 1
+            else:
+                Y_all_without.append(np.array(temp_df[region]))
+                for ind_feature in range(len(featuresList)):
+                    features = [featuresList[ind_feature]]
+                    Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
+
+                    if flag_all == 0:
+                        X_all_without[ind_feature] = np.copy(Xtemp)
+                        flag_all = 1
+                    else:
+                        X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
+                
+                flag_all = 1
+
+Y_all_without = np.concatenate((Y_all_without))
+Y_group_without = np.concatenate((Y_group_without))
+
+W_map_all = np.empty((len(featuresList)), dtype=object)
+W_map_group = np.empty((len(featuresList)), dtype=object)
+train_mse_all = np.zeros((len(featuresList)))
+test_mse_all = np.zeros((len(featuresList)))
+r2_animal_test_all = np.zeros((len(featuresList)))
+r2_animal_test_group = np.zeros((len(featuresList)))
+mse_animal_test_all = np.zeros((len(featuresList)))
+mse_animal_test_group = np.zeros((len(featuresList)))
+
+for ind in range(len(featuresList)):
+
+    features = [featuresList[ind]]
+    print(featuresList[ind])
     
-#         alpha_features_before = []
-#         for alpha_ind in range(len(alpha_values)):
-#             # regularizer hyperparameter
-#             alpha = alpha_values[alpha_ind] 
-#             alpha_features = alpha_features_before + [alpha] # only last feature is being tested with different alpha's
-#             feature_start = [1 + Nbin * x for x in range(len(features))] # start of features
-#             # Fit to train data
-#             W_temp[k, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=feature_start, alpha_features=alpha_features) # bias term and only one tuning curve
-#             # MSE
-#             train_mse_temp[k, alpha_ind] = mse(X_train, Y_train, W_temp[k, alpha_ind])
-#             test_mse_temp[k, alpha_ind] = mse(X_test, Y_test, W_temp[k, alpha_ind])
+    # global fit
+    W_temp = np.empty((K, len(alpha_values)), dtype=object)
+    train_mse_temp = np.zeros((K, len(alpha_values)))
+    test_mse_temp = np.zeros((K, len(alpha_values)))
+    # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
+    for k in range(K):
+        presentTrain, presentTest = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=400, random_state=42)
+        X_train, X_test, Y_train, Y_test = X_all_without[ind_feature][presentTrain[k]], X_all_without[ind_feature][presentTest[k]], Y_all_without[presentTrain[k]], Y_all_without[presentTest[k]]
+        alpha_features_before = []
+        for alpha_ind in range(len(alpha_values)):
+            # regularizer hyperparameter
+            alpha = alpha_values[alpha_ind] 
+            alpha_features = alpha_features_before + [alpha] # only last feature is being tested with different alpha's
+            feature_start = [1 + Nbin * x for x in range(len(features))] # start of features
+            # Fit to train data
+            W_temp[k, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=feature_start, alpha_features=alpha_features) # bias term and only one tuning curve
+            # MSE
+            train_mse_temp[k, alpha_ind] = mse(X_train, Y_train, W_temp[k, alpha_ind])
+            test_mse_temp[k, alpha_ind] = mse(X_test, Y_test, W_temp[k, alpha_ind])
+    # getting best alpha from fits of all days together
+    train_mse_mean = np.mean(train_mse_temp, axis=0)
+    test_mse_mean = np.mean(test_mse_temp, axis=0)
+    best_alpha_ind = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)[0]
+    best_alpha_all = alpha_values[best_alpha_ind]
+    # Fit for all animals without one
+    W_map_all[ind] = solution_linear_Gaussian_smoothing(X_all_without[ind_feature], Y_all_without, feature_start=[1], alpha_features=[best_alpha_all]) 
 
-#     # getting best alpha from fits of all days together
-#     train_mse_mean = np.mean(train_mse_temp, axis=0)
-#     test_mse_mean = np.mean(test_mse_temp, axis=0)
-#     best_alpha_ind = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)[0]
-#     best_alpha = alpha_values[best_alpha_ind]
+    # group fit
+    W_temp = np.empty((K, len(alpha_values)), dtype=object)
+    train_mse_temp = np.zeros((K, len(alpha_values)))
+    test_mse_temp = np.zeros((K, len(alpha_values)))
+    # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
+    for k in range(K):
+        presentTrain, presentTest = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=400, random_state=42)
+        X_train, X_test, Y_train, Y_test = X_group_without[ind_feature][presentTrain[k]], X_group_without[ind_feature][presentTest[k]], Y_group_without[presentTrain[k]], Y_group_without[presentTest[k]]
+    
+        alpha_features_before = []
+        for alpha_ind in range(len(alpha_values)):
+            # regularizer hyperparameter
+            alpha = alpha_values[alpha_ind] 
+            alpha_features = alpha_features_before + [alpha] # only last feature is being tested with different alpha's
+            feature_start = [1 + Nbin * x for x in range(len(features))] # start of features
+            # Fit to train data
+            W_temp[k, alpha_ind] = solution_linear_Gaussian_smoothing(X_train, Y_train, feature_start=feature_start, alpha_features=alpha_features) # bias term and only one tuning curve
+            # MSE
+            train_mse_temp[k, alpha_ind] = mse(X_train, Y_train, W_temp[k, alpha_ind])
+            test_mse_temp[k, alpha_ind] = mse(X_test, Y_test, W_temp[k, alpha_ind])
+    # getting best alpha from fits of all days together
+    train_mse_mean = np.mean(train_mse_temp, axis=0)
+    test_mse_mean = np.mean(test_mse_temp, axis=0)
+    best_alpha_ind = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)[0]
+    best_alpha_group = alpha_values[best_alpha_ind]
+    # Fit for all animals in the group without one
+    W_map_group[ind] = solution_linear_Gaussian_smoothing(X_group_without[ind_feature], Y_group_without, feature_start=[1], alpha_features=[best_alpha_group]) 
 
-#     # fitting K-fold
-#     W_map[ind], train_mse[ind], test_mse[ind], r2[ind] = fit_linear_Gaussian_smoothing_per_day(animal, group, features=[featuresList[ind]], region=region, Nbin=Nbin, alpha=best_alpha, path=data_path)
-                         
-# # saving
-# np.savez(f'../data/{animal}/{animal}_{group}_MAP-estimation_per-day_region={region}', W_map=W_map, train_mse=train_mse, test_mse=test_mse, r2=r2)
+    # testing group and global models on missing animal
+    X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, Nbins=Nbin, path=data_path)
+    temp_df = load_and_wrangle(mouseId=animal_without, group=group_without, path=data_path, overwrite=False)
+    temp_df = temp_df[temp_df['day']=='d9'] # only day 9
+    Y_animal_test = np.array(temp_df[region])
+    r2_animal_test_all[ind] = compute_r_squared(X_animal_test, Y_animal_test, W_map_all[ind])
+    r2_animal_test_group[ind] = compute_r_squared(X_animal_test, Y_animal_test, W_map_group[ind])
+    mse_animal_test_all[ind] = mse(X_animal_test, Y_animal_test, W_map_all[ind])
+    mse_animal_test_group[ind] = mse(X_animal_test, Y_animal_test, W_map_group[ind])
+               
+# saving
+np.savez(f'../data/{animal}/{animal}_{group}_test_MAP-estimation_day9_region={region}', W_map_all=W_map_all, W_map_group=W_map_group, best_alpha_all=best_alpha_all, best=best_alpha_group, r2_animal_test_all=r2_animal_test_all, r2_animal_test_group=r2_animal_test_group, mse_animal_test_all=mse_animal_test_all, mse_animal_test_group=mse_animal_test_group)
 
