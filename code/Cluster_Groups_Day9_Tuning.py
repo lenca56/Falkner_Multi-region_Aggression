@@ -11,21 +11,16 @@ import scipy
 import sys
 import os
 
-animalsAgg = ['29L','3095']
-animalsObs = []
-animalsToy = []
-# animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-# animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
-# animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
+animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
+animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
+animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
 animalsAll = animalsAgg + animalsObs + animalsToy
 groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
-# featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms",'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle"]
-# circularList = [0, 0, 0, 0, 0, 1, 1, 1]
 featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-tti','resident2intruder head2head angle', "resident tti2head", "intruder tti2head"]
 
 data_path = '../data'
-id = pd.DataFrame(columns=['animal','region']) # in total z=399
+id = pd.DataFrame(columns=['animal','region']) # in total z=532
 z = 0
 for ind in range(len(animalsAll)):
     animal = animalsAll[ind]
@@ -37,10 +32,9 @@ for ind in range(len(animalsAll)):
         id.loc[z, 'region'] = region
         id.loc[z, 'group'] = group
         z += 1
-print(z)
 
 # read from cluster array in order to get parallelizations
-idx = 0 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
+idx = int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
 animal_without = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
@@ -113,7 +107,6 @@ mse_animal_test_group = np.zeros((len(featuresList)))
 for ind in range(len(featuresList)):
 
     features = [featuresList[ind]]
-    print(featuresList[ind])
     
     # global fit
     W_temp = np.empty((K, len(alpha_values)), dtype=object)
@@ -181,5 +174,5 @@ for ind in range(len(featuresList)):
     mse_animal_test_group[ind] = mse(X_animal_test, Y_animal_test, W_map_group[ind])
                
 # saving
-np.savez(f'../data/{animal}/{animal}_{group}_test_MAP-estimation_day9_region={region}', W_map_all=W_map_all, W_map_group=W_map_group, best_alpha_all=best_alpha_all, best=best_alpha_group, r2_animal_test_all=r2_animal_test_all, r2_animal_test_group=r2_animal_test_group, mse_animal_test_all=mse_animal_test_all, mse_animal_test_group=mse_animal_test_group)
+np.savez(f'../data/{animal_without}/{animal_without}_{group_without}_test_MAP-estimation_day9_region={region}', W_map_all=W_map_all, W_map_group=W_map_group, best_alpha_all=best_alpha_all, best=best_alpha_group, r2_animal_test_all=r2_animal_test_all, r2_animal_test_group=r2_animal_test_group, mse_animal_test_all=mse_animal_test_all, mse_animal_test_group=mse_animal_test_group)
 
