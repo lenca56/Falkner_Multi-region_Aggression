@@ -40,17 +40,18 @@ region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(1,6.5,0.5)] 
+alpha_values = [10**x for x in np.arange(1,5.5,0.5)] 
 Nbin = 20
-K = 3
-
-flag_all = 0
-flag_group = 0
+K = 4
 
 Y_all_without = []
 X_all_without = np.empty((len(featuresList)), dtype=object)
 Y_group_without = []
 X_group_without = np.empty((len(featuresList)), dtype=object)
+
+
+flag_all = np.zeros((len(featuresList)))
+flag_group = np.zeros((len(featuresList)))
 
 for ind in range(len(animalsAll)):
     animal = animalsAll[ind]
@@ -59,38 +60,38 @@ for ind in range(len(animalsAll)):
     if animal != animal_without or group != group_without:
         temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
         temp_df = temp_df[temp_df['day']=='d9'] # only day 9
-        if region in temp_df.columns:
+        temp_regions = get_regions_dataframe(temp_df)
+        if region in temp_regions:
             if group == group_without:
                 Y_all_without.append(np.array(temp_df[region]))
                 Y_group_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
                     features = [featuresList[ind_feature]]
                     Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
-                    if flag_group == 0:
+                    if flag_group[ind_feature] == 0:
                         X_group_without[ind_feature] = np.copy(Xtemp)
+                        flag_group[ind_feature] == 1
                     else:
                         X_group_without[ind_feature] = np.concatenate((X_group_without[ind_feature], Xtemp))
                     
-                    if flag_all == 0:
+                    if flag_all[ind_feature] == 0:
                         X_all_without[ind_feature] = np.copy(Xtemp)
+                        flag_all[ind_feature] = 1
                     else:
                         X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
                 
-                flag_group = 1
-                flag_all = 1
             else:
                 Y_all_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
                     features = [featuresList[ind_feature]]
                     Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
 
-                    if flag_all == 0:
+                    if flag_all[ind_feature] == 0:
                         X_all_without[ind_feature] = np.copy(Xtemp)
-                        flag_all = 1
+                        flag_all[ind_feature] = 1
                     else:
                         X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
                 
-                flag_all = 1
 
 Y_all_without = np.concatenate((Y_all_without))
 Y_group_without = np.concatenate((Y_group_without))
@@ -174,5 +175,5 @@ for ind in range(len(featuresList)):
     mse_animal_test_group[ind] = mse(X_animal_test, Y_animal_test, W_map_group[ind])
                
 # saving
-np.savez(f'../data/{animal_without}/{animal_without}_{group_without}_test_MAP-estimation_day9_region={region}', W_map_all=W_map_all, W_map_group=W_map_group, best_alpha_all=best_alpha_all, best=best_alpha_group, r2_animal_test_all=r2_animal_test_all, r2_animal_test_group=r2_animal_test_group, mse_animal_test_all=mse_animal_test_all, mse_animal_test_group=mse_animal_test_group)
+np.savez(f'../data/{animal_without}/{animal_without}_{group_without}_test_MAP-estimation_day9_region={region}', W_map_all=W_map_all, W_map_group=W_map_group, best_alpha_all=best_alpha_all, best_alpha_group=best_alpha_group, r2_animal_test_all=r2_animal_test_all, r2_animal_test_group=r2_animal_test_group, mse_animal_test_all=mse_animal_test_all, mse_animal_test_group=mse_animal_test_group)
 

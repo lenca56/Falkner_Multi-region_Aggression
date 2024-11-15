@@ -81,6 +81,7 @@ def solution_linear_Gaussian_smoothing(X, Y, feature_start, alpha_features):
     
     L = np.sum(L_features, axis = 0)
 
+    A = X.T @ X + L
     return np.linalg.solve(X.T @ X + L, X.T @ Y) 
 
 def mse(X_true, Y_true, W_map):
