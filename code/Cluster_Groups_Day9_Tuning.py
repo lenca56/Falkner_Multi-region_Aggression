@@ -17,7 +17,7 @@ animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group an
 animalsAll = animalsAgg + animalsObs + animalsToy
 groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
-featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-tti','resident2intruder head2head angle', "resident tti2head", "intruder tti2head"]
+featuresList = ['proximity'] #["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-tti','resident2intruder head2head angle', "resident tti2head", "intruder tti2head"]
 
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=532
@@ -38,9 +38,12 @@ idx = 500 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
 animal_without = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
+print(animal_without)
+print(region)
+print(group_without)
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(1,5.5,0.5)] 
+alpha_values = [10,100] #[10**x for x in np.arange(1,5.5,0.5)] 
 Nbin = 20
 K = 4
 
@@ -56,6 +59,7 @@ flag_group = np.zeros((len(featuresList)))
 for ind in range(len(animalsAll)):
     animal = animalsAll[ind]
     group = groupsAll[ind]
+    print(animal)
 
     if animal != animal_without or group != group_without:
         temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
@@ -135,6 +139,7 @@ for ind in range(len(featuresList)):
     best_alpha_all = alpha_values[best_alpha_ind]
     # Fit for all animals without one
     W_map_all[ind] = solution_linear_Gaussian_smoothing(X_all_without[ind_feature], Y_all_without, feature_start=[1], alpha_features=[best_alpha_all]) 
+    print(W_map_all[ind])
 
     # group fit
     W_temp = np.empty((K, len(alpha_values)), dtype=object)
@@ -163,7 +168,7 @@ for ind in range(len(featuresList)):
     best_alpha_group = alpha_values[best_alpha_ind]
     # Fit for all animals in the group without one
     W_map_group[ind] = solution_linear_Gaussian_smoothing(X_group_without[ind_feature], Y_group_without, feature_start=[1], alpha_features=[best_alpha_group]) 
-
+    print(W_map_group[ind])
     # testing group and global models on missing animal
     X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, Nbins=Nbin, path=data_path)
     temp_df = load_and_wrangle(mouseId=animal_without, group=group_without, path=data_path, overwrite=False)
