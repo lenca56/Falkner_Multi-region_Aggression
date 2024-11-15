@@ -11,9 +11,9 @@ import scipy
 import sys
 import os
 
-animalsAgg = ['29L','3095'] #['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-animalsObs = ['29L','30R2'] #['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
-animalsToy = ['583L2','583B'] # ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
+animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
+animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
+animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
 animalsAll = animalsAgg + animalsObs + animalsToy
 groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
@@ -34,7 +34,7 @@ for ind in range(len(animalsAll)):
         z += 1
 
 # read from cluster array in order to get parallelizations
-idx = 120 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
+idx = 500 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
 animal_without = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
