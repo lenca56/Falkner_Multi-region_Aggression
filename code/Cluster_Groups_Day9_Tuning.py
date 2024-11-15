@@ -34,7 +34,7 @@ for ind in range(len(animalsAll)):
         z += 1
 
 # read from cluster array in order to get parallelizations
-idx = int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
+idx = 500 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
 animal_without = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
