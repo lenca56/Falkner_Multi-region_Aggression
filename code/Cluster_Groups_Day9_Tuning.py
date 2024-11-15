@@ -83,7 +83,10 @@ for ind in range(len(animalsAll)):
                         flag_all[ind_feature] = 1
                     else:
                         X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
-                
+                print("Same group")
+                print(Xtemp.shape)
+                print(Y_all_without[-1].shape)
+                print(Y_group_without[-1].shape)
             else:
                 Y_all_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
@@ -95,6 +98,11 @@ for ind in range(len(animalsAll)):
                         flag_all[ind_feature] = 1
                     else:
                         X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
+                
+                print("Different group")
+                print(Xtemp.shape)
+                print(Y_all_without[-1].shape)
+                print(Y_group_without[-1].shape)
                 
 
 Y_all_without = np.concatenate((Y_all_without))
