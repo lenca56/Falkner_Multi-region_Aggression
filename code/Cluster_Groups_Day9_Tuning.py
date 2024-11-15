@@ -86,7 +86,6 @@ for ind in range(len(animalsAll)):
                 print("Same group")
                 print(Xtemp.shape)
                 print(Y_all_without[-1].shape)
-                print(Y_group_without[-1].shape)
             else:
                 Y_all_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
