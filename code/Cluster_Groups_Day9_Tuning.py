@@ -109,9 +109,9 @@ r2_animal_test_group = np.zeros((len(featuresList)))
 mse_animal_test_all = np.zeros((len(featuresList)))
 mse_animal_test_group = np.zeros((len(featuresList)))
 
-for ind in range(len(featuresList)):
+for ind_feature in range(len(featuresList)):
 
-    features = [featuresList[ind]]
+    features = [featuresList[ind_feature]]
     
     # global fit
     W_temp = np.empty((K, len(alpha_values)), dtype=object)
@@ -138,8 +138,8 @@ for ind in range(len(featuresList)):
     best_alpha_ind = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)[0]
     best_alpha_all = alpha_values[best_alpha_ind]
     # Fit for all animals without one
-    W_map_all[ind] = solution_linear_Gaussian_smoothing(X_all_without[ind_feature], Y_all_without, feature_start=[1], alpha_features=[best_alpha_all]) 
-    print(W_map_all[ind])
+    W_map_all[ind_feature] = solution_linear_Gaussian_smoothing(X_all_without[ind_feature], Y_all_without, feature_start=[1], alpha_features=[best_alpha_all]) 
+    print(W_map_all[ind_feature])
 
     # group fit
     W_temp = np.empty((K, len(alpha_values)), dtype=object)
@@ -167,17 +167,17 @@ for ind in range(len(featuresList)):
     best_alpha_ind = np.unravel_index(np.argmin(test_mse_mean), test_mse_mean.shape)[0]
     best_alpha_group = alpha_values[best_alpha_ind]
     # Fit for all animals in the group without one
-    W_map_group[ind] = solution_linear_Gaussian_smoothing(X_group_without[ind_feature], Y_group_without, feature_start=[1], alpha_features=[best_alpha_group]) 
-    print(W_map_group[ind])
+    W_map_group[ind_feature] = solution_linear_Gaussian_smoothing(X_group_without[ind_feature], Y_group_without, feature_start=[1], alpha_features=[best_alpha_group]) 
+    print(W_map_group[ind_feature])
     # testing group and global models on missing animal
     X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, Nbins=Nbin, path=data_path)
     temp_df = load_and_wrangle(mouseId=animal_without, group=group_without, path=data_path, overwrite=False)
     temp_df = temp_df[temp_df['day']=='d9'] # only day 9
     Y_animal_test = np.array(temp_df[region])
-    r2_animal_test_all[ind] = compute_r_squared(X_animal_test, Y_animal_test, W_map_all[ind])
-    r2_animal_test_group[ind] = compute_r_squared(X_animal_test, Y_animal_test, W_map_group[ind])
-    mse_animal_test_all[ind] = mse(X_animal_test, Y_animal_test, W_map_all[ind])
-    mse_animal_test_group[ind] = mse(X_animal_test, Y_animal_test, W_map_group[ind])
+    r2_animal_test_all[ind_feature] = compute_r_squared(X_animal_test, Y_animal_test, W_map_all[ind_feature])
+    r2_animal_test_group[ind_feature] = compute_r_squared(X_animal_test, Y_animal_test, W_map_group[ind_feature])
+    mse_animal_test_all[ind_feature] = mse(X_animal_test, Y_animal_test, W_map_all[ind_feature])
+    mse_animal_test_group[ind_feature] = mse(X_animal_test, Y_animal_test, W_map_group[ind_feature])
                
 # saving
 np.savez(f'../data/{animal_without}/{animal_without}_{group_without}_test_MAP-estimation_day9_region={region}', W_map_all=W_map_all, W_map_group=W_map_group, best_alpha_all=best_alpha_all, best_alpha_group=best_alpha_group, r2_animal_test_all=r2_animal_test_all, r2_animal_test_group=r2_animal_test_group, mse_animal_test_all=mse_animal_test_all, mse_animal_test_group=mse_animal_test_group)
