@@ -59,14 +59,14 @@ flag_group = np.zeros((len(featuresList)))
 for ind in range(len(animalsAll)):
     animal = animalsAll[ind]
     group = groupsAll[ind]
-    print(animal)
 
     if animal != animal_without or group != group_without:
+        print(animal)
         temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
         temp_df = temp_df[temp_df['day']=='d9'] # only day 9
         temp_regions = get_regions_dataframe(temp_df)
         if region in temp_regions:
-            if group == group_without:
+            if group == group_without: # animals are in the same group as testing one
                 Y_all_without.append(np.array(temp_df[region]))
                 Y_group_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
@@ -86,6 +86,7 @@ for ind in range(len(animalsAll)):
                 print("Same group")
                 print(Xtemp.shape)
                 print(Y_all_without[-1].shape)
+                print(Y_group_without[-1].shape)
             else:
                 Y_all_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
@@ -101,7 +102,6 @@ for ind in range(len(animalsAll)):
                 print("Different group")
                 print(Xtemp.shape)
                 print(Y_all_without[-1].shape)
-                print(Y_group_without[-1].shape)
                 
 
 Y_all_without = np.concatenate((Y_all_without))
