@@ -12,19 +12,25 @@ import sys
 import os
 
 animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
+animalsAgg_Short = ['3095','3097','30R2','30L','4016','91R2']
 animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
 animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
-animalsAll = animalsAgg + animalsObs + animalsToy
-groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
-featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-tti','resident2intruder head2head angle', "resident tti2head", "intruder tti2head"]
+animalsAll = animalsAgg_Short + animalsObs + animalsToy
+groupsAll = ['agg' for i in range(len(animalsAgg_Short))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
+
+animalsAll_ = animalsAgg + animalsObs + animalsToy
+groupsAll_ = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
+
+featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle",
+   "resident tti2head", "intruder tti2head", "resident tailbase2head angle", "intruder tailbase2head angle"]
 
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=532
 z = 0
-for ind in range(len(animalsAll)):
-    animal = animalsAll[ind]
-    group = groupsAll[ind]
+for ind in range(len(animalsAll_)):
+    animal = animalsAll_[ind]
+    group = groupsAll_[ind]
     df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
     regions = get_regions_dataframe(df)
     for region in regions:
@@ -32,6 +38,7 @@ for ind in range(len(animalsAll)):
         id.loc[z, 'region'] = region
         id.loc[z, 'group'] = group
         z += 1
+# print(z)
 
 # read from cluster array in order to get parallelizations
 idx = int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
@@ -39,6 +46,8 @@ animal_without = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
 
+# print(group_without)
+# print(animal_without)
 
 # setting hyperparameters
 alpha_values = [10**x for x in np.arange(0,5.5,0.5)] 
@@ -59,6 +68,8 @@ for ind in range(len(animalsAll)):
     group = groupsAll[ind]
 
     if animal != animal_without or group != group_without:
+        # print(group)
+        # print(animal)
         temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
         temp_df = temp_df[temp_df['day']=='d9'] # only day 9
         temp_regions = get_regions_dataframe(temp_df)
@@ -93,9 +104,13 @@ for ind in range(len(animalsAll)):
                         X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
                 
                 
-
 Y_all_without = np.concatenate((Y_all_without))
 Y_group_without = np.concatenate((Y_group_without))
+
+# print(Y_all_without.shape)
+# print(X_all_without[0].shape)
+# print(Y_group_without.shape)
+# print(X_group_without[0].shape)
 
 W_map_all = np.empty((len(featuresList)), dtype=object)
 W_map_group = np.empty((len(featuresList)), dtype=object)
