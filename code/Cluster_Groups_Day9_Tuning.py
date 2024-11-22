@@ -16,21 +16,17 @@ animalsAgg_Short = ['3095','3097','30R2','30L','4016','91R2']
 animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
 animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
 
-animalsAll = animalsAgg_Short + animalsObs + animalsToy
-groupsAll = ['agg' for i in range(len(animalsAgg_Short))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
+animalsAll = animalsAgg + animalsObs + animalsToy
+groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
 
-animalsAll_ = animalsAgg + animalsObs + animalsToy
-groupsAll_ = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]
-
-featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident2intruder head2tti angle', "intruder2resident head2centroid angle",
-   "resident tti2head", "intruder tti2head", "resident tailbase2head angle", "intruder tailbase2head angle"]
+featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid roc 500 ms", 'resident2intruder head-head', 'resident2intruder head-tti','resident2intruder head2head angle', 'resident tti2head']
 
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=532
 z = 0
-for ind in range(len(animalsAll_)):
-    animal = animalsAll_[ind]
-    group = groupsAll_[ind]
+for ind in range(len(animalsAll)):
+    animal = animalsAll[ind]
+    group = groupsAll[ind]
     df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
     regions = get_regions_dataframe(df)
     for region in regions:
@@ -38,7 +34,6 @@ for ind in range(len(animalsAll_)):
         id.loc[z, 'region'] = region
         id.loc[z, 'group'] = group
         z += 1
-# print(z)
 
 # read from cluster array in order to get parallelizations
 idx = int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
@@ -50,7 +45,7 @@ group_without = id.loc[idx, 'group']
 # print(animal_without)
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(0,5.5,0.5)] 
+alpha_values = [10**x for x in np.arange(0,9,0.5)] 
 Nbin = 20
 K = 4
 
@@ -58,7 +53,6 @@ Y_all_without = []
 X_all_without = np.empty((len(featuresList)), dtype=object)
 Y_group_without = []
 X_group_without = np.empty((len(featuresList)), dtype=object)
-
 
 flag_all = np.zeros((len(featuresList)))
 flag_group = np.zeros((len(featuresList)))
@@ -103,7 +97,6 @@ for ind in range(len(animalsAll)):
                     else:
                         X_all_without[ind_feature] = np.concatenate((X_all_without[ind_feature], Xtemp))
                 
-                
 Y_all_without = np.concatenate((Y_all_without))
 Y_group_without = np.concatenate((Y_group_without))
 
@@ -114,8 +107,7 @@ Y_group_without = np.concatenate((Y_group_without))
 
 W_map_all = np.empty((len(featuresList)), dtype=object)
 W_map_group = np.empty((len(featuresList)), dtype=object)
-train_mse_all = np.zeros((len(featuresList)))
-test_mse_all = np.zeros((len(featuresList)))
+r2_itself_group = np.zeros((len(featuresList)))
 r2_animal_test_all = np.zeros((len(featuresList)))
 r2_animal_test_group = np.zeros((len(featuresList)))
 mse_animal_test_all = np.zeros((len(featuresList)))
@@ -131,7 +123,7 @@ for ind_feature in range(len(featuresList)):
     test_mse_temp = np.zeros((K, len(alpha_values)))
     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
     for k in range(K):
-        presentTrain, presentTest = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=400, random_state=42)
+        presentTrain, presentTest = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=200, random_state=42)
         X_train, X_test, Y_train, Y_test = X_all_without[ind_feature][presentTrain[k]], X_all_without[ind_feature][presentTest[k]], Y_all_without[presentTrain[k]], Y_all_without[presentTest[k]]
         alpha_features_before = []
         for alpha_ind in range(len(alpha_values)):
@@ -159,7 +151,7 @@ for ind_feature in range(len(featuresList)):
 
     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
     for k in range(K):
-        presentTrain, presentTest = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=400, random_state=42)
+        presentTrain, presentTest = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=200, random_state=42)
         X_train, X_test, Y_train, Y_test = X_group_without[ind_feature][presentTrain[k]], X_group_without[ind_feature][presentTest[k]], Y_group_without[presentTrain[k]], Y_group_without[presentTest[k]]
     
         alpha_features_before = []
@@ -180,6 +172,7 @@ for ind_feature in range(len(featuresList)):
     best_alpha_group = alpha_values[best_alpha_ind]
     # Fit for all animals in the group without one
     W_map_group[ind_feature] = solution_linear_Gaussian_smoothing(X_group_without[ind_feature], Y_group_without, feature_start=[1], alpha_features=[best_alpha_group]) 
+    r2_itself_group[ind_feature] = compute_r_squared(X_group_without[ind_feature], Y_group_without, W_map_group[ind_feature])
     
     # testing group and global models on missing animal
     X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, Nbins=Nbin, path=data_path)
