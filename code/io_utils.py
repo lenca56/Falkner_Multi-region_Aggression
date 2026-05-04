@@ -78,14 +78,9 @@ def load_and_wrangle(mouseId, group='agg', path=None, overwrite=False, newBatch=
     
     else:
 
-        if newBatch == False:
-            # Load data into dictionary
-            with open('../data/fully_labeled_traces_feats3_071924.pickle', 'rb') as handle:
-                dict = pickle.load(handle)
-        else:
-            # Load data into dictionary
-            with open('../data/fully_labeled_traces_forLenca.pickle', 'rb') as handle:
-                dict = pickle.load(handle)
+        # Load data into dictionary
+        with open('../data/fully_labeled_traces_forLenca.pickle', 'rb') as handle:
+            dict = pickle.load(handle)
 
 
         # create dataframe

@@ -37,10 +37,9 @@ for ind in range(len(animalsAllNew)):
         id.loc[z, 'region'] = region
         id.loc[z, 'group'] = group
         z += 1
-print(z)
 
 # read from cluster array in order to get parallelizations
-idx = 0 #int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
+idx = int(os.environ["SLURM_ARRAY_TASK_ID"]) # check 9, 223,311
 animal_without = id.loc[idx,'animal']
 region = id.loc[idx,'region']
 group_without = id.loc[idx, 'group']
@@ -117,7 +116,7 @@ r2_animal_test_group = np.zeros((len(featuresList)))
 mse_animal_test_all = np.zeros((len(featuresList)))
 mse_animal_test_group = np.zeros((len(featuresList)))
 
-for ind_feature in [0]:#range(len(featuresList)):
+for ind_feature in range(len(featuresList)):
 
     features = [featuresList[ind_feature]]
     
@@ -126,7 +125,7 @@ for ind_feature in [0]:#range(len(featuresList)):
     train_mse_temp = np.zeros((K, len(alpha_values)))
     test_mse_temp = np.zeros((K, len(alpha_values)))
     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
-    for k in [0]:#range(K):
+    for k in range(K):
         presentTrain, presentTest = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=200, random_state=42)
         X_train, X_test, Y_train, Y_test = X_all_without[ind_feature][presentTrain[k]], X_all_without[ind_feature][presentTest[k]], Y_all_without[presentTrain[k]], Y_all_without[presentTest[k]]
         alpha_features_before = []
@@ -154,7 +153,7 @@ for ind_feature in [0]:#range(len(featuresList)):
     test_mse_temp = np.zeros((K, len(alpha_values)))
 
     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
-    for k in [0]: #range(K):
+    for k in range(K):
         presentTrain, presentTest = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=200, random_state=42)
         X_train, X_test, Y_train, Y_test = X_group_without[ind_feature][presentTrain[k]], X_group_without[ind_feature][presentTest[k]], Y_group_without[presentTrain[k]], Y_group_without[presentTest[k]]
     
