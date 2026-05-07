@@ -296,6 +296,32 @@ def get_design_day9_X_GLM_features(animal, group, features, Nbins=10, path=None)
 
     return X, bin_centers
 
+def zscore_per_session(df, regions, session_col='trial'):
+    """
+    Z-score neural activity per session for all regions.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+    regions : str or list of str
+        single region or list of regions to z-score
+    session_col : str
+        column name for session identifier
+    """
+    df = df.copy()
+    if isinstance(regions, str):
+        regions = [regions]
+    
+    for sess_id, sess_idx in df.groupby(session_col).groups.items():
+        for region in regions:
+            Y_sess = df.loc[sess_idx, region]
+            std = Y_sess.std()
+            if std < 1e-10:  # guard against flat sessions
+                df.loc[sess_idx, region] = 0.0
+            else:
+                df.loc[sess_idx, region] = (Y_sess - Y_sess.mean()) / std
+    return df
+
 def get_output_Y_GLM(animal, group, region, path=None):
     ''' 
     function to prepare vector output Y (calcium populationa activity for one specific region) for GLM

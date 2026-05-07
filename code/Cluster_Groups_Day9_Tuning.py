@@ -12,9 +12,8 @@ import sys
 import os
 
 animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-animalsAgg_Short = ['3095','3097','30R2','30L','4016','91R2']
-animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R'] # list of observer animals
-animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2'] # list of toy group animals
+animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R', '1162B','1185'] # list of observer animals
+animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2','1162L2','1162R'] # list of toy group animals
 
 animalsAll = animalsAgg + animalsObs + animalsToy
 groupsAll = ['agg' for i in range(len(animalsAgg))] + ['obs' for i in range(len(animalsObs))] + ['toy' for i in range(len(animalsToy))]

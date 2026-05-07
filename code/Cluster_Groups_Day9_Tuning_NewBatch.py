@@ -11,11 +11,10 @@ import scipy
 import sys
 import os
 
-# new animals 
+# new animals included
 animalsAgg = ['29L','3095','3096','3097','30B','30L','30R2','4013','4014','4015','4016','91R2'] # list of all aniamls
-animalsAgg_Short = ['3095','3097','30R2','30L','4016','91R2']
-animalsObs = ['1162B','1185','29L','30R2','86L', '87L2','927L','927R','933R']
-animalsToy = ['1162L2','1162R','583L2','583B','86L2', '87B', '87L','87R2']
+animalsObs = ['29L','30R2','86L', '87L2','927L','927R','933R', '1162B','1185'] # list of observer animals
+animalsToy = ['583L2','583B','86L2', '87B', '87L','87R2','1162L2','1162R'] # list of toy group animals
 
 animalsAll = animalsAgg + animalsObs + animalsToy
 animalsAllNew = animalsObs + animalsToy
@@ -27,9 +26,9 @@ featuresList = ["proximity","resident centroid roc 500 ms", "intruder centroid r
 data_path = '../data'
 id = pd.DataFrame(columns=['animal','region']) # in total z=532
 z = 0
-for ind in range(len(animalsAllNew)):
-    animal = animalsAllNew[ind]
-    group = groupsAllNew[ind]
+for ind in range(len(animalsAll)):
+    animal = animalsAll[ind]
+    group = groupsAll[ind]
     df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False, newBatch=True)
     regions = get_regions_dataframe(df)
     for region in regions:
@@ -48,7 +47,7 @@ group_without = id.loc[idx, 'group']
 # print(animal_without)
 
 # setting hyperparameters
-alpha_values = [10**x for x in np.arange(0,9,0.5)] 
+alpha_values = [10**x for x in np.arange(-2,9,0.5)] 
 Nbin = 20
 K = 4
 
@@ -67,9 +66,10 @@ for ind in range(len(animalsAll)):
     if animal != animal_without or group != group_without:
         # print(group)
         # print(animal)
-        temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False)
+        temp_df = load_and_wrangle(mouseId=animal, group=group, path=data_path, overwrite=False, newBatch=True)
         temp_df = temp_df[temp_df['day']=='d9'] # only day 9
         temp_regions = get_regions_dataframe(temp_df)
+        temp_df = zscore_per_session(temp_df, temp_regions, session_col='trial')
         if region in temp_regions:
             if group == group_without: # animals are in the same group as testing one
                 Y_all_without.append(np.array(temp_df[region]))
@@ -103,6 +103,11 @@ for ind in range(len(animalsAll)):
 Y_all_without = np.concatenate((Y_all_without))
 Y_group_without = np.concatenate((Y_group_without))
 
+temp_df = load_and_wrangle(mouseId=animal_without, group=group_without, path=data_path, overwrite=False, newBatch=True)
+temp_df = temp_df[temp_df['day']=='d9'] # only day 9
+temp_df = zscore_per_session(temp_df, region, session_col='trial')
+Y_animal_test = np.array(temp_df[region])
+
 # print(Y_all_without.shape)
 # print(X_all_without[0].shape)
 # print(Y_group_without.shape)
@@ -116,6 +121,9 @@ r2_animal_test_group = np.zeros((len(featuresList)))
 mse_animal_test_all = np.zeros((len(featuresList)))
 mse_animal_test_group = np.zeros((len(featuresList)))
 
+presentTrain_all, presentTest_all = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=200, random_state=42)
+presentTrain_group, presentTest_group = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=200, random_state=42)
+
 for ind_feature in range(len(featuresList)):
 
     features = [featuresList[ind_feature]]
@@ -126,8 +134,8 @@ for ind_feature in range(len(featuresList)):
     test_mse_temp = np.zeros((K, len(alpha_values)))
     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
     for k in range(K):
-        presentTrain, presentTest = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=200, random_state=42)
-        X_train, X_test, Y_train, Y_test = X_all_without[ind_feature][presentTrain[k]], X_all_without[ind_feature][presentTest[k]], Y_all_without[presentTrain[k]], Y_all_without[presentTest[k]]
+        # presentTrain, presentTest = split_data(N=Y_all_without.shape[0], Kfolds=K, blocks=200, random_state=42)
+        X_train, X_test, Y_train, Y_test = X_all_without[ind_feature][presentTrain_all[k]], X_all_without[ind_feature][presentTest_all[k]], Y_all_without[presentTrain_all[k]], Y_all_without[presentTest_all[k]]
         alpha_features_before = []
         for alpha_ind in range(len(alpha_values)):
             # regularizer hyperparameter
@@ -154,8 +162,8 @@ for ind_feature in range(len(featuresList)):
 
     # Find best alpha from day 9 curve for all animals (since for the toy group that is the only real behavioral data)
     for k in range(K):
-        presentTrain, presentTest = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=200, random_state=42)
-        X_train, X_test, Y_train, Y_test = X_group_without[ind_feature][presentTrain[k]], X_group_without[ind_feature][presentTest[k]], Y_group_without[presentTrain[k]], Y_group_without[presentTest[k]]
+        # presentTrain, presentTest = split_data(N=Y_group_without.shape[0], Kfolds=K, blocks=200, random_state=42)
+        X_train, X_test, Y_train, Y_test = X_group_without[ind_feature][presentTrain_group[k]], X_group_without[ind_feature][presentTest_group[k]], Y_group_without[presentTrain_group[k]], Y_group_without[presentTest_group[k]]
     
         alpha_features_before = []
         for alpha_ind in range(len(alpha_values)):
@@ -179,9 +187,7 @@ for ind_feature in range(len(featuresList)):
     
     # testing group and global models on missing animal
     X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, Nbins=Nbin, path=data_path)
-    temp_df = load_and_wrangle(mouseId=animal_without, group=group_without, path=data_path, overwrite=False)
-    temp_df = temp_df[temp_df['day']=='d9'] # only day 9
-    Y_animal_test = np.array(temp_df[region])
+
     r2_animal_test_all[ind_feature] = compute_r_squared(X_animal_test, Y_animal_test, W_map_all[ind_feature])
     r2_animal_test_group[ind_feature] = compute_r_squared(X_animal_test, Y_animal_test, W_map_group[ind_feature])
     mse_animal_test_all[ind_feature] = mse(X_animal_test, Y_animal_test, W_map_all[ind_feature])
