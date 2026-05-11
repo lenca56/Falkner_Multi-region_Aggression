@@ -59,6 +59,15 @@ X_group_without = np.empty((len(featuresList)), dtype=object)
 flag_all = np.zeros((len(featuresList)))
 flag_group = np.zeros((len(featuresList)))
 
+def load_bin_edges(path, features):
+    """Load shared bin edges from an .npz, keyed by original feature names."""
+    def sanitize(f):
+        return f.replace(' ', '_').replace('-', '_')
+    with np.load(path) as f:
+        return {feat: f[sanitize(feat)] for feat in features}
+    
+bin_edges = load_bin_edges('../data/shared_bin_edges_d9.npz', featuresList)
+
 for ind in range(len(animalsAll)):
     animal = animalsAll[ind]
     group = groupsAll[ind]
@@ -76,7 +85,7 @@ for ind in range(len(animalsAll)):
                 Y_group_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
                     features = [featuresList[ind_feature]]
-                    Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
+                    Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, bin_edges=bin_edges, path=data_path)
                     if flag_group[ind_feature] == 0:
                         X_group_without[ind_feature] = np.copy(Xtemp)
                         flag_group[ind_feature] = 1
@@ -92,7 +101,7 @@ for ind in range(len(animalsAll)):
                 Y_all_without.append(np.array(temp_df[region]))
                 for ind_feature in range(len(featuresList)):
                     features = [featuresList[ind_feature]]
-                    Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, Nbins=Nbin, path=data_path)
+                    Xtemp, _ = get_design_day9_X_GLM_features(animal, group=group, features=features, bin_edges=bin_edges, path=data_path)
 
                     if flag_all[ind_feature] == 0:
                         X_all_without[ind_feature] = np.copy(Xtemp)
@@ -186,7 +195,7 @@ for ind_feature in range(len(featuresList)):
     r2_itself_group[ind_feature] = compute_r_squared(X_group_without[ind_feature], Y_group_without, W_map_group[ind_feature])
     
     # testing group and global models on missing animal
-    X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, Nbins=Nbin, path=data_path)
+    X_animal_test,_ = get_design_day9_X_GLM_features(animal_without, group=group_without, features=features, bin_edges=bin_edges, path=data_path)
 
     r2_animal_test_all[ind_feature] = compute_r_squared(X_animal_test, Y_animal_test, W_map_all[ind_feature])
     r2_animal_test_group[ind_feature] = compute_r_squared(X_animal_test, Y_animal_test, W_map_group[ind_feature])

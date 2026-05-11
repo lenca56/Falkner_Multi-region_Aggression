@@ -228,7 +228,7 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
 
     return X_all, X, bin_centers
 
-def get_design_day9_X_GLM_features(animal, group, features, Nbins=10, path=None):
+def get_design_day9_X_GLM_features(animal, group, features, bin_edges, path=None):
 
     ''' 
     Works for multiple features now
@@ -255,8 +255,8 @@ def get_design_day9_X_GLM_features(animal, group, features, Nbins=10, path=None)
     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
     
     data = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
-    trials = np.unique(data['trial'])
     data = data[data['day'] == 'd9']
+    trials = np.unique(data['trial'])
 
     for ind_feature in range(len(features)):
         a = np.empty((len(trials)), dtype=object) # all features across sessions 
@@ -267,22 +267,24 @@ def get_design_day9_X_GLM_features(animal, group, features, Nbins=10, path=None)
             df = pd.read_parquet(f'../data/processed_features_020924_parquets/{animal}_d9_{temp.loc[0,"other"]}_{trials[ind_trial]}_zscored_features.parquet')
             a[c] = np.array(df[features[ind_feature]])
             c = c + 1
-
-        # creating the bins
-        all = np.concatenate(a)
-        _, bin_edges = np.histogram(all, bins=Nbins)
             
         # creating arrays with binned features
+        edges = bin_edges[features[ind_feature]]   # precomputed shared edges
+        # creating the bins
+        Nbins = len(edges) - 1
         c = 0
         X_temp = np.empty((len(trials)), dtype=object)
         for ind_trial in range(0,len(trials)): # trial index
             X_temp[ind_trial] = np.zeros((a[c].shape[0], Nbins))
             for ind_bin in range(Nbins):
-                ind_lower = np.argwhere(a[c] >=  bin_edges[ind_bin]).flatten()
-                ind_upper = np.argwhere(a[c] <  bin_edges[ind_bin+1]).flatten()
+                # catch-all at the ends: first bin extends to -inf, last bin extends to +inf
+                left  = -np.inf if ind_bin == 0          else edges[ind_bin]
+                right =  np.inf if ind_bin == Nbins - 1  else edges[ind_bin+1]
+                ind_lower = np.argwhere(a[c] >= left).flatten()
+                ind_upper = np.argwhere(a[c] <  right).flatten()
                 ind_binned = list(set(ind_lower).intersection(set(ind_upper)))
                 X_temp[ind_trial][ind_binned, ind_bin] = 1
-            c = c + 1    
+            c = c + 1
 
         if (ind_feature > 0): 
             X = np.concatenate([X, np.concatenate((X_temp), axis=0)], axis=1) # concatenate across trials within a day
@@ -292,7 +294,8 @@ def get_design_day9_X_GLM_features(animal, group, features, Nbins=10, path=None)
     # add bias term as first coulumns
     X = np.concatenate([np.ones((X.shape[0], 1)), X], axis=1) 
 
-    bin_centers = (bin_edges[0:-1] + bin_edges[1:])/2
+    bin_centers = {feat: 0.5 * (bin_edges[feat][:-1] + bin_edges[feat][1:])
+               for feat in features}
 
     return X, bin_centers
 
