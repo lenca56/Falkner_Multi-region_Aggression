@@ -229,75 +229,138 @@ def get_design_X_GLM_features(animal, group, features, Nbins=10, path=None):
     return X_all, X, bin_centers
 
 def get_design_day9_X_GLM_features(animal, group, features, bin_edges, path=None):
+    """
+    Build a binned design matrix using shared edges. Timepoints where ANY
+    requested feature lies outside its bin range are dropped from X. The
+    returned keep_mask lets the caller align Y by Y[keep_mask].
 
-    ''' 
-    Works for multiple features now
+    Returns
+    -------
+    X : ndarray, shape (n_kept, 1 + Nbins * len(features))
+    keep_mask : ndarray of bool, shape (n_total,)
+    bin_centers : dict feature -> 1D array
+    """
+    path = Path(path) if path is not None else Path(
+        "/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data"
+    )
+    parquet_dir = path / "processed_features_020924_parquets"
 
-    Parameters:
-    ----------
-    animal: str
-        animal ID
-    variables: list of str
-        behavioral variables to be include in the design matrix
-    timelags: list of [int,int]
-        both positive
-
-
-    Returns:
-    --------
-    X_all: numpy array
-        array of behavioral features in time for all days together, except the last day
-    X: array of vectors
-        X[day] is an array of behavioral features in time given for a particular day
-    '''
-
-    # loading path on my hard disk as default
-    path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
-    
     data = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
     data = data[data['day'] == 'd9']
     trials = np.unique(data['trial'])
 
-    for ind_feature in range(len(features)):
-        a = np.empty((len(trials)), dtype=object) # all features across sessions 
-        c = 0 # counting index
-        
-        for ind_trial in range(0,len(trials)): # trial index
-            temp = data[data['trial'] == trials[ind_trial]].reset_index()
-            df = pd.read_parquet(f'../data/processed_features_020924_parquets/{animal}_d9_{temp.loc[0,"other"]}_{trials[ind_trial]}_zscored_features.parquet')
-            a[c] = np.array(df[features[ind_feature]])
-            c = c + 1
-            
-        # creating arrays with binned features
-        edges = bin_edges[features[ind_feature]]   # precomputed shared edges
-        # creating the bins
+    # Load all feature values per trial, in order
+    feat_vals = {feat: [] for feat in features}
+    for trial in trials:
+        temp = data[data['trial'] == trial].reset_index()
+        if len(temp) == 0:
+            continue
+        other = temp.loc[0, 'other']
+        pq = parquet_dir / f'{animal}_d9_{other}_{trial}_zscored_features.parquet'
+        df = pd.read_parquet(pq)
+        for feat in features:
+            feat_vals[feat].append(np.asarray(df[feat], dtype=float))
+    for feat in features:
+        feat_vals[feat] = np.concatenate(feat_vals[feat])
+
+    n_total = next(iter(feat_vals.values())).shape[0]
+
+    # Build keep_mask: every feature must be finite AND within its bin range
+    keep_mask = np.ones(n_total, dtype=bool)
+    for feat in features:
+        edges = bin_edges[feat]
+        v = feat_vals[feat]
+        keep_mask &= np.isfinite(v) & (v >= edges[0]) & (v <= edges[-1])
+
+    # Build feature blocks on kept timepoints only
+    X_blocks = []
+    bin_centers = {}
+    for feat in features:
+        edges = bin_edges[feat]
         Nbins = len(edges) - 1
-        c = 0
-        X_temp = np.empty((len(trials)), dtype=object)
-        for ind_trial in range(0,len(trials)): # trial index
-            X_temp[ind_trial] = np.zeros((a[c].shape[0], Nbins))
-            for ind_bin in range(Nbins):
-                # catch-all at the ends: first bin extends to -inf, last bin extends to +inf
-                left  = -np.inf if ind_bin == 0          else edges[ind_bin]
-                right =  np.inf if ind_bin == Nbins - 1  else edges[ind_bin+1]
-                ind_lower = np.argwhere(a[c] >= left).flatten()
-                ind_upper = np.argwhere(a[c] <  right).flatten()
-                ind_binned = list(set(ind_lower).intersection(set(ind_upper)))
-                X_temp[ind_trial][ind_binned, ind_bin] = 1
-            c = c + 1
+        v = feat_vals[feat][keep_mask]
+        idx = np.digitize(v, edges[1:-1], right=False)   # in [0, Nbins-1]
+        # values exactly == edges[-1] go to bin Nbins-1 (correct, last bin closed)
+        X_block = np.zeros((v.size, Nbins))
+        X_block[np.arange(v.size), idx] = 1.0
+        X_blocks.append(X_block)
+        bin_centers[feat] = 0.5 * (edges[:-1] + edges[1:])
 
-        if (ind_feature > 0): 
-            X = np.concatenate([X, np.concatenate((X_temp), axis=0)], axis=1) # concatenate across trials within a day
-        else:
-            X = np.concatenate((X_temp), axis=0)
+    X = np.concatenate(X_blocks, axis=1)
+    X = np.concatenate([np.ones((X.shape[0], 1)), X], axis=1)  # bias
 
-    # add bias term as first coulumns
-    X = np.concatenate([np.ones((X.shape[0], 1)), X], axis=1) 
+    return X, keep_mask, bin_centers
 
-    bin_centers = {feat: 0.5 * (bin_edges[feat][:-1] + bin_edges[feat][1:])
-               for feat in features}
+# def get_design_day9_X_GLM_features(animal, group, features, bin_edges, path=None):
 
-    return X, bin_centers
+#     ''' 
+#     Works for multiple features now
+
+#     Parameters:
+#     ----------
+#     animal: str
+#         animal ID
+#     variables: list of str
+#         behavioral variables to be include in the design matrix
+#     timelags: list of [int,int]
+#         both positive
+
+
+#     Returns:
+#     --------
+#     X_all: numpy array
+#         array of behavioral features in time for all days together, except the last day
+#     X: array of vectors
+#         X[day] is an array of behavioral features in time given for a particular day
+#     '''
+
+#     # loading path on my hard disk as default
+#     path = Path("/Volumes/Lenca_SSD/github/Falkner_Multi-region_Aggression/data") if path is None else Path(path)
+    
+#     data = load_and_wrangle(mouseId=animal, group=group, path=path, overwrite=False)
+#     data = data[data['day'] == 'd9']
+#     trials = np.unique(data['trial'])
+
+#     for ind_feature in range(len(features)):
+#         a = np.empty((len(trials)), dtype=object) # all features across sessions 
+#         c = 0 # counting index
+        
+#         for ind_trial in range(0,len(trials)): # trial index
+#             temp = data[data['trial'] == trials[ind_trial]].reset_index()
+#             df = pd.read_parquet(f'../data/processed_features_020924_parquets/{animal}_d9_{temp.loc[0,"other"]}_{trials[ind_trial]}_zscored_features.parquet')
+#             a[c] = np.array(df[features[ind_feature]])
+#             c = c + 1
+            
+#         # creating arrays with binned features
+#         edges = bin_edges[features[ind_feature]]   # precomputed shared edges
+#         # creating the bins
+#         Nbins = len(edges) - 1
+#         c = 0
+#         X_temp = np.empty((len(trials)), dtype=object)
+#         for ind_trial in range(0,len(trials)): # trial index
+#             X_temp[ind_trial] = np.zeros((a[c].shape[0], Nbins))
+#             for ind_bin in range(Nbins):
+#                 # catch-all at the ends: first bin extends to -inf, last bin extends to +inf
+#                 left  = -np.inf if ind_bin == 0          else edges[ind_bin]
+#                 right =  np.inf if ind_bin == Nbins - 1  else edges[ind_bin+1]
+#                 ind_lower = np.argwhere(a[c] >= left).flatten()
+#                 ind_upper = np.argwhere(a[c] <  right).flatten()
+#                 ind_binned = list(set(ind_lower).intersection(set(ind_upper)))
+#                 X_temp[ind_trial][ind_binned, ind_bin] = 1
+#             c = c + 1
+
+#         if (ind_feature > 0): 
+#             X = np.concatenate([X, np.concatenate((X_temp), axis=0)], axis=1) # concatenate across trials within a day
+#         else:
+#             X = np.concatenate((X_temp), axis=0)
+
+#     # add bias term as first coulumns
+#     X = np.concatenate([np.ones((X.shape[0], 1)), X], axis=1) 
+
+#     bin_centers = {feat: 0.5 * (bin_edges[feat][:-1] + bin_edges[feat][1:])
+#                for feat in features}
+
+#     return X, bin_centers
 
 def zscore_per_session(df, regions, session_col='trial'):
     """
